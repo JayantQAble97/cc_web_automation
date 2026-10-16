@@ -1,0 +1,71 @@
+projects:
+  tripstacc:
+    testDir: TripStacc/tests
+    clients:
+      BOB:
+        QA:   { baseUrl: "https://qa-travel-1-6-bobcard.travel-loyalty.com/" }
+        UAT:  { baseUrl: "https://uat-travel-bobcard.travel-loyalty.com/" }
+        PROD: { baseUrl: "" }
+      IDFC:
+        QA:   { baseUrl: "https://qa-travel-idfc.travel-loyalty.com/" }
+        UAT:  { baseUrl: "https://uat-travel-idfc.travel-loyalty.com/" }
+        PROD: { baseUrl: "" }
+      SBI:
+        QA:   { baseUrl: "" }   # to be filled in
+        UAT:  { baseUrl: "" }
+        PROD: { baseUrl: "" }
+
+  shopstacc:
+    testDir: ShopStacc/tests
+    clients:
+      BOBCARD:
+        QA:   { baseUrl: "https://qa-sso.ai-loyalty.com/Login/BOBQASSQA13012026" }
+        UAT:  { baseUrl: "https://uat-sso.ai-loyalty.com/Login/UYTC-IIU8D-FJHK89C-SH87AASRC-U20230306T" }
+        PROD: { baseUrl: "" }
+
+defaults:
+  browserName: chromium
+  headless: true
+  viewport: { width: 1920, height: 1080 }
+
+# LambdaTest grid profiles for utils/lambdaGrid.ts.
+#
+# Select a profile with GRID_PROFILE=<name>; falls back to grid.defaultProfile
+# below if unset. Any LAMBDA_*/IS_GRID env var (e.g. set via cross-env in
+# package.json scripts) still overrides the value from the active profile,
+# so existing scripts keep working unchanged.
+#
+# Secrets (LAMBDA_USER/LAMBDA_KEY) stay in .env — never put them here.
+grid:
+  defaultProfile: local
+
+  profiles:
+    local:
+      isGrid: false
+
+    windows-chrome:
+      isGrid: true
+      realDevice: false
+      platform: "Windows 10"
+      resolution: "1920x1080"
+
+    windows-firefox:
+      isGrid: true
+      realDevice: false
+      platform: "Windows 10"
+      resolution: "1920x1080"
+
+    macos-webkit:
+      isGrid: true
+      realDevice: false
+      platform: "macOS Sonoma"
+      resolution: "1920x1080"
+
+    android-real:
+      isGrid: true
+      realDevice: true
+      realDeviceOptions:
+        platformName: android
+        deviceName: ".*"
+        platformVersion: ".*"
+

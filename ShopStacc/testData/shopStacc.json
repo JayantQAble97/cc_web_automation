@@ -1,0 +1,10 @@
+{
+  "BOBCARD": {
+    "loginDataFill": {
+      "mobileNumber": "__CONFIGURE_BOBCARD_LOGINDATAFILL_MOBILENUMBER__",
+      "otp": "__CONFIGURE_BOBCARD_LOGINDATAFILL_OTP__",
+      "userId": "__CONFIGURE_BOBCARD_LOGINDATAFILL_USERID__",
+      "userPassword": "__CONFIGURE_BOBCARD_LOGINDATAFILL_USERPASSWORD__"
+    }
+  }
+}
