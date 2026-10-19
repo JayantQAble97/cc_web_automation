@@ -70,7 +70,7 @@ on:
         type: boolean
         default: false
       update_schedule:
-        description: "Update the daily nightly schedule time below (pushes a commit to main)"
+        description: "Compute a new daily nightly schedule time (shown in job summary — you apply it to the YAML manually)"
         required: false
         type: boolean
         default: false
@@ -97,17 +97,9 @@ jobs:
   update-schedule:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.update_schedule == 'true'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      workflows: write
     env:
       SCHEDULE_TIME: ${{ github.event.inputs.schedule_time }}
     steps:
-      - name: Checkout main
-        uses: actions/checkout@v4
-        with:
-          ref: main
-
       - name: Validate time and compute UTC cron
         id: cron
         run: |
@@ -125,33 +117,18 @@ jobs:
           CRON=$(printf '%d %d * * *' "$UTC_MM" "$UTC_HH")
           UTC_TIME=$(printf '%02d:%02d' "$UTC_HH" "$UTC_MM")
           if [ "$IST_MIN" -lt 330 ]; then DAY_NOTE=" (previous calendar day)"; else DAY_NOTE=""; fi
-          echo "cron=$CRON" >> "$GITHUB_OUTPUT"
-          echo "comment=    # ${TIME} IST = ${UTC_TIME} UTC${DAY_NOTE}" >> "$GITHUB_OUTPUT"
-          echo "ist_time=$TIME" >> "$GITHUB_OUTPUT"
-
-      - name: Update cron schedule in workflow file
-        env:
-          NEW_CRON: ${{ steps.cron.outputs.cron }}
-          NEW_COMMENT: ${{ steps.cron.outputs.comment }}
-        run: |
-          FILE=".github/workflows/tripstacc-web-idfc.yml"
-          sed -i "s|^\( *\)- cron: \".*\"|\1- cron: \"$NEW_CRON\"|" "$FILE"
-          sed -i "s|^ *# .*IST = .*UTC.*|$NEW_COMMENT|" "$FILE"
-
-      - name: Commit and push schedule change
-        env:
-          IST_TIME: ${{ steps.cron.outputs.ist_time }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .github/workflows/tripstacc-web-idfc.yml
-          if git diff --cached --quiet; then
-            echo "Schedule already set to ${IST_TIME} IST — nothing to commit."
-          else
-            git commit -m "chore: update TripStacc IDFC nightly schedule to ${IST_TIME} IST"
-            git push origin HEAD:main
-            echo "### 🕒 Nightly schedule updated to ${IST_TIME} IST" >> "$GITHUB_STEP_SUMMARY"
-          fi
+          {
+            echo "## 🕒 New nightly schedule: ${TIME} IST"
+            echo ""
+            echo "GitHub's default token can't push changes to workflow files, so this can't be applied automatically."
+            echo "Edit \`.github/workflows/tripstacc-web-idfc.yml\` on \`main\` yourself:"
+            echo ""
+            echo '```yaml'
+            echo "  schedule:"
+            echo "    # ${TIME} IST = ${UTC_TIME} UTC${DAY_NOTE}"
+            echo "    - cron: \"${CRON}\""
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
   test:
     needs: set-matrix
@@ -178,6 +155,7 @@ jobs:
       TEST_HotelPage: ${{ github.event.inputs.test_HotelPage || 'false' }}
       TEST_LoginPage: ${{ github.event.inputs.test_LoginPage || 'false' }}
       TEST_MyAccountPage: ${{ github.event.inputs.test_MyAccountPage || 'false' }}
+      EMAIL_TO: ${{ github.event_name == 'workflow_dispatch' && 'jignesh.shah@customer-capital.com' || 'dharm.vrat@customer-capital.com' }}
 
     steps:
       - name: Checkout repository
@@ -370,7 +348,7 @@ jobs:
           username: jignesh.shah@customer-capital.com
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "[${{ steps.stats.outputs.status }}] TripStacc IDFC ${{ env.ENVIRONMENT }} [${{ env.BROWSER }}/Web]${{ env.FEATURE_TAG && format(' @{0}', env.FEATURE_TAG) || '' }} — Playwright Report"
-          to: dharm.vrat@customer-capital.com
+          to: ${{ env.EMAIL_TO }}
           from: jignesh.shah@customer-capital.com
           html_body: |
             <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
