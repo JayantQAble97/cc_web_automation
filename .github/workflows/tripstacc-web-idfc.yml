@@ -323,7 +323,7 @@ jobs:
           fi
 
       - name: Deploy report to GitHub Pages
-        if: always()
+        if: always() && github.event_name == 'schedule'
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -337,12 +337,17 @@ jobs:
         if: always()
         id: report-url
         run: |
-          REPO="${{ github.repository }}"
-          ORG=$(echo "$REPO" | cut -d'/' -f1)
-          REPO_NAME=$(echo "$REPO" | cut -d'/' -f2)
-          URL="https://${ORG}.github.io/${REPO_NAME}/tripstacc/IDFC-${{ env.ENVIRONMENT }}-${{ env.BROWSER }}/${{ github.run_id }}/"
-          echo "url=$URL" >> "$GITHUB_OUTPUT"
-          echo "### 📊 [View Playwright Report]($URL)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            REPO="${{ github.repository }}"
+            ORG=$(echo "$REPO" | cut -d'/' -f1)
+            REPO_NAME=$(echo "$REPO" | cut -d'/' -f2)
+            URL="https://${ORG}.github.io/${REPO_NAME}/tripstacc/IDFC-${{ env.ENVIRONMENT }}-${{ env.BROWSER }}/${{ github.run_id }}/"
+            echo "url=$URL" >> "$GITHUB_OUTPUT"
+            echo "### 📊 [View Playwright Report]($URL)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "url=" >> "$GITHUB_OUTPUT"
+            echo "### 📊 Report not published to GitHub Pages for manual runs (only the nightly scheduled run publishes, to avoid extra GitHub Pages build triggers). Download the HTML report artifact above instead." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Send email report
         if: always()
@@ -375,8 +380,7 @@ jobs:
                 <tr><td style="font-weight:bold">Triggered by</td><td>${{ github.actor }}</td></tr>
               </table>
               <p style="margin-top:16px">
-                <a href="${{ steps.report-url.outputs.url }}" style="background:#0066cc;color:#fff;padding:10px 18px;border-radius:4px;text-decoration:none;font-weight:bold">📊 View Playwright Report</a>
-                &nbsp;
+                ${{ steps.report-url.outputs.url != '' && format('<a href="{0}" style="background:#0066cc;color:#fff;padding:10px 18px;border-radius:4px;text-decoration:none;font-weight:bold">📊 View Playwright Report</a>&nbsp;', steps.report-url.outputs.url) || '' }}
                 <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" style="background:#555;color:#fff;padding:10px 18px;border-radius:4px;text-decoration:none;font-weight:bold">🔗 View Run</a>
               </p>
             </div>
