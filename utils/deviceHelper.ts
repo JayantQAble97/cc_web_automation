@@ -4,21 +4,23 @@
  * based on the project naming convention in playwright.config.ts
  */
 
+// Same device list playwright.config.ts uses, so a device added there is
+// automatically treated as mobile here.
+const mobileDevices: { name: string }[] = require('../mobileDevices');
+const MOBILE_DEVICE_NAMES = mobileDevices.map(d => d.name.toLowerCase());
+
 export class DeviceHelper {
-  
+
   /**
    * Checks if the current project environment is configured for mobile.
-   * Relies on the 'PROJECT' environment variable defined in your 
-   * terminal command (e.g., IDFC-chrome-uat-mobile-iphone13).
+   * Relies on the 'PROJECT' environment variable defined in your
+   * terminal command (e.g., tripstacc-chrome-UAT-mobile-iphone13 or tripstacc-chrome-UAT-GalaxyS21).
    */
     static isMobile(): boolean {
-    const project = process.env.PROJECT?.toLowerCase() || '';
-    
-    // Check if it's one of your known iPhones or Galaxies
-    const mobileDevices = ['iphone12', 'iphone13', 'iphonese', 'galaxys20', 'galaxys21', 'pixel4a', 'pixel5', 'oneplus8', 'oneplus9'];
-    
-    // Returns true if the project string contains "mobile" OR any of these device names
-    return project.includes('mobile') || mobileDevices.some(device => project.includes(device));
+    const segments = (process.env.PROJECT?.toLowerCase() || '').split('-');
+
+    // Returns true if PROJECT has a "mobile" segment OR a segment naming a device from mobileDevices.js
+    return segments.includes('mobile') || segments.some(segment => MOBILE_DEVICE_NAMES.includes(segment));
   }
 
   /**

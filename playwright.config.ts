@@ -6,8 +6,8 @@ const mobileDevices = require('./mobileDevices');
 
 // ─── SETTINGS ────────────────────────────────────────────────────────────────
 const TIMEOUT = 300000;
-//const RETRIES = 1;             // retries on failure
-const WORKERS = { ci: 1, local: 2 };
+const RETRIES = 1;             // retries on failure
+const WORKERS = { ci: 1, local: 1 };
 const HEADED  = process.env.HEADED === 'true';
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -30,6 +30,17 @@ let tag: string | undefined;
 if (parts[3]?.toLowerCase() === 'mobile') {
   deviceName = parts[4];
   tag = parts[5];
+
+  // Fail fast on a typo/unknown device instead of silently generating no project
+  const isKnownDevice = mobileDevices.some(
+    (d: { name: string }) => d.name.toLowerCase() === deviceName?.toLowerCase()
+  );
+  if (!isKnownDevice) {
+    throw new Error(
+      `Unknown mobile device "${deviceName ?? ''}" in PROJECT "${projectEnv}". ` +
+      `Available: ${mobileDevices.map((d: { name: string }) => d.name).join(', ')} (see mobileDevices.js).`
+    );
+  }
 } else {
   const deviceOrTag = parts[3];
 
@@ -115,7 +126,8 @@ if (deviceName) {
 
             screenshot: 'on',
             video: 'on',
-          
+            trace: 'on',
+
 
             connectOptions: GRID.isGrid
               ? {
