@@ -2,15 +2,13 @@ const nodemailer = require('nodemailer');
 const fs = require('fs');
 const path = require('path');
 
-const SMTP_USER = 'ankitpatel@qable.io';
-const SMTP_PASS = 'zjwtgkflbwczqrpb';
+require('dotenv').config();
+
+const SMTP_USER = 'jignesh.shah@customer-capital.com';
+const SMTP_PASS = process.env.SMTP_PASSWORD;
 
 const TO = [
   'dharm.vrat@customer-capital.com',
-  'urvashi.saraswat@customer-capital.com',
-  'nikunj.trivedi@qable.io',
-  'aneri.patel@qable.io',
-  '1ee687f3.linearloop.io@in.teams.ms',
 ];
 
 const reportPath = path.resolve(__dirname, '../reports/test-results.json');

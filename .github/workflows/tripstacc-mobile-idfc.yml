@@ -224,11 +224,11 @@ jobs:
         with:
           server_address: smtp.office365.com
           server_port: 587
-          username: ankitpatel@qable.io
-          password: zjwtgkflbwczqrpb
+          username: jignesh.shah@customer-capital.com
+          password: ${{ secrets.SMTP_PASSWORD }}
           subject: "[${{ steps.stats.outputs.status }}] TripStacc IDFC ${{ env.DEVICE }} ${{ env.ENVIRONMENT }}${{ env.FEATURE_TAG && format(' @{0}', env.FEATURE_TAG) || '' }} — Playwright Report"
-          to: dharm.vrat@customer-capital.com, urvashi.saraswat@customer-capital.com, nikunj.trivedi@qable.io, aneri.patel@qable.io, 1ee687f3.linearloop.io@in.teams.ms
-          from: ankitpatel@qable.io
+          to: dharm.vrat@customer-capital.com
+          from: jignesh.shah@customer-capital.com
           html_body: |
             <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
               <h2 style="background:${{ steps.stats.outputs.status == 'FAILED' && '#cc0000' || '#00b300' }};color:#fff;padding:12px 16px;border-radius:4px;margin:0">

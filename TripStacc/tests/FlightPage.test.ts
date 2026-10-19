@@ -68,18 +68,28 @@ test('SC_003: Search ', { tag: ['@idfc', '@bob','@common','@issue', '@homepagefl
     await page.waitForTimeout(5000);
     await FlightHomePage.clickOntravellersAndCabinClass(page);
     await FlightHomePage.VerifytravellersAndCabinClassDropdownVisible(page);
-    await FlightHomePage.clickOntravellersAndCabinClass(page);
+    await FlightHomePage.clickOnApplyButton(page);
     await FlightHomePage.clickOnCloseTravellersAndCabinClassDropdown(page);
     await page.waitForTimeout(3000);
   });
 
+  let searchFormUrl: string;
   await test.step("Step 10: Click search flights button", async () => {
+    searchFormUrl = page.url();
     await FlightHomePage.clickOnSearchFlightsButton(page);
   });
 
-  await test.step("Step 11: Verify first flight card visible", async () => {
+  await test.step("Step 11: Verify user is navigated to Flight Search Results page matching the entered criteria", async () => {
+    await FlightHomePage.verifyNavigatedToFlightSearchResults(page, searchFormUrl);
+  });
+
+  await test.step("Step 12: Verify first flight card visible", async () => {
     await page.waitForLoadState('domcontentloaded');
     await FlightHomePage.VerifyFirstFlightCardVisible(page);
+  });
+
+  await test.step("Step 13: Verify a list of available flights is displayed with one card per flight/fare", async () => {
+    await FlightHomePage.verifyFlightResultCardsList(page);
   });
 });
 
@@ -118,7 +128,6 @@ test('SC_003.01: Search (1 Passenger and Multiple Passengers) ', { tag: ['@idfc'
     await page.waitForTimeout(5000);
     await FlightHomePage.clickOntravellersAndCabinClasses(page);
     await FlightHomePage.VerifytravellersAndCabinClassDropdownVisible(page);
-    // Start from 1 Adult regardless of what the last search pre-filled
     await FlightHomePage.resetTravellersToOneAdult(page);
   });
 
@@ -196,7 +205,7 @@ test('SC_003.02: Search (One Way and Round Trip) ', { tag: ['@idfc', '@bob', '@c
     await page.waitForTimeout(5000);
     await FlightHomePage.clickOntravellersAndCabinClass(page);
     await FlightHomePage.VerifytravellersAndCabinClassDropdownVisible(page);
-    await FlightHomePage.clickOntravellersAndCabinClass(page);
+    await FlightHomePage.clickOnApplyButton(page);
     await FlightHomePage.clickOnCloseTravellersAndCabinClassDropdown(page);
     await page.waitForTimeout(3000);
   });
@@ -255,6 +264,7 @@ test('SC_003.02: Search (One Way and Round Trip) ', { tag: ['@idfc', '@bob', '@c
   });
   await test.step('Step 18: Click search flights button', async () => {
     await page.waitForTimeout(5000);
+    await FlightHomePage.captureSelectedCitiesFromSearchForm(page);
     await FlightHomePage.clickOnSearchFlightsButton(page);
   });
   await test.step('Step 19: Verify first flight card visible', async () => {
@@ -264,7 +274,19 @@ test('SC_003.02: Search (One Way and Round Trip) ', { tag: ['@idfc', '@bob', '@c
     await FlightHomePage.VerifyFirstFlightCardVisible(page);
   });
 
-  await test.step('Step 20: Flight Round Trip Details Box visible', async () => {
+  await test.step('Step 20: Verify each flight card shows airline, flight number, timings, duration, stops and price', async () => {
+    await FlightHomePage.verifyFlightCardsShowKeyDetails(page);
+  });
+
+  await test.step('Step 21: Verify fare type tag Refundable is displayed on each flight card', async () => {
+    await FlightHomePage.verifyFlightCardsShowFareType(page);
+  });
+
+  await test.step('Step 22: Select a return flight and verify it is highlighted and reflected in the fare summary', async () => {
+    await FlightHomePage.selectReturnFlightAndVerifyFareSummary(page);
+  });
+
+  await test.step('Step 23: Flight Round Trip Details Box visible', async () => {
     await FlightHomePage.printFlightRoutes(page);
   });
 });
@@ -448,7 +470,7 @@ test('SC_003.04: Search (With International and Domestic) ', { tag: ['@idfc', '@
      await page.waitForTimeout(8000);
     await FlightHomePage.VerifytravellersAndCabinClassDropdownVisible(page);
      await page.waitForTimeout(8000);
-    await FlightHomePage.clickOntravellersAndCabinClass(page);
+    await FlightHomePage.clickOnApplyButton(page);
      await page.waitForTimeout(8000);
     await FlightHomePage.clickOnCloseTravellersAndCabinClassDropdown(page);
     await page.waitForTimeout(3000);
@@ -507,6 +529,7 @@ test('SC_003.04: Search (With International and Domestic) ', { tag: ['@idfc', '@
     await page.waitForLoadState('domcontentloaded')
     await FlightHomePage.VerifyFirstFlightCardVisible(page);
   });
+
 });
 
 test('SC_004: Filter/Sorting and Flight Selection with Fare Type ', { tag: ['@idfc', '@bob', '@common', '@flaky', '@homepageflight', '@regression'] }, async () => {
@@ -547,7 +570,7 @@ test('SC_004: Filter/Sorting and Flight Selection with Fare Type ', { tag: ['@id
     await page.waitForTimeout(5000);
     await FlightHomePage.clickOntravellersAndCabinClass(page);
     await FlightHomePage.VerifytravellersAndCabinClassDropdownVisible(page);
-    await FlightHomePage.clickOntravellersAndCabinClass(page);
+    await FlightHomePage.clickOnApplyButton(page);
     await FlightHomePage.clickOnCloseTravellersAndCabinClassDropdown(page);
     await page.waitForTimeout(3000);
   });
@@ -799,7 +822,7 @@ test('SC_005: Add Traveller Details and Update Traveller Details ', { tag: ['@id
     await page.waitForTimeout(5000);
     await FlightHomePage.clickOntravellersAndCabinClass(page);
     await FlightHomePage.VerifytravellersAndCabinClassDropdownVisible(page);
-    await FlightHomePage.clickOntravellersAndCabinClass(page);
+    await FlightHomePage.clickOnApplyButton(page);
     await FlightHomePage.clickOnCloseTravellersAndCabinClassDropdown(page);
     await page.waitForTimeout(3000);
   });
@@ -923,7 +946,7 @@ test('SC_006: Check and update user information (Mobile number/Email Address) an
     await page.waitForTimeout(5000);
     await FlightHomePage.clickOntravellersAndCabinClass(page);
     await FlightHomePage.VerifytravellersAndCabinClassDropdownVisible(page);
-    await FlightHomePage.clickOntravellersAndCabinClass(page);
+    await FlightHomePage.clickOnApplyButton(page);
     await FlightHomePage.clickOnCloseTravellersAndCabinClassDropdown(page);
     await page.waitForTimeout(3000);
   });
@@ -991,200 +1014,4 @@ test('SC_006: Check and update user information (Mobile number/Email Address) an
   });
 });
 
-test('SC_007: With Passport and without Passport Details (for international) ', { tag: ['@idfc', '@bob', '@common', '@homepageflight', '@passport', '@regression'] }, async () => {
-  await test.step("Step 1: Enter City From Airport", async () => {
-    await page.waitForTimeout(5000);
-    await FlightHomePage.clickOnCityFromAirport(page);
-    await FlightHomePage.EnterCityFromAirport(page, Data.flightPage.enterCityFrom);
-  })
-
-  await test.step("Step 2: Verify From Airport Dropdown Visible", async () => {
-    await FlightHomePage.VerifyFromAirpotDropdownVisible(page);
-    await FlightHomePage.clickOnFirstSearchResultfromCityDropdown(page);
-  })
-
-  await test.step("Step 3: Enter City To Airport", async () => {
-    await FlightHomePage.clickOnToAirport(page);
-    await FlightHomePage.EnterCityToAirport(page, Data.flightPage.enterInternationalCityTo);
-  })
-
-  await test.step("Step 4: Verify To Airport Dropdown Visible", async () => {
-    await FlightHomePage.VerifyToAirpotDropdownVisible(page);
-    await FlightHomePage.clickOnfirstSearchResultToCityDropdown(page);
-  })
-
-  await test.step("Step 5: Enter date of departure", async () => {
-    await page.waitForTimeout(5000);
-    await FlightHomePage.clickOnDepartureDate(page);
-    await FlightHomePage.selectTomorrowDateForDeparture(page);
-  })
-
-  await test.step("Step 6: Click and verify travellers and cabin class dropdown", async () => {
-    await page.waitForTimeout(5000);
-    await FlightHomePage.clickOntravellersAndCabinClass(page);
-    await FlightHomePage.VerifytravellersAndCabinClassDropdownVisible(page);
-    await FlightHomePage.clickOntravellersAndCabinClass(page);
-    await FlightHomePage.clickOnCloseTravellersAndCabinClassDropdown(page);
-    await page.waitForTimeout(3000);
-  });
-
-  await test.step("Step 7: Click search flights button", async () => {
-    await FlightHomePage.clickOnSearchFlightsButton(page);
-  });
-
-  await test.step("Step 8: Verify first flight card visible", async () => {
-    await FlightHomePage.VerifyFirstFlightCardVisible(page);
-  });
-  await test.step("Step 9: Click on Next Button On Flight Details Page", async () => {
-    await FlightHomePage.clickOnNextButtonOnFlightDetailsPage(page);
-  });
-  await test.step("Step 10: Click on Book Button On Flight Details Page", async () => {
-    await FlightHomePage.clickOnBookButtonOnFlightDetailsPage(page);
-  });
-
-  await test.step("Step 11: Click on Continue Button On Flight Details Page", async () => {
-    await FlightHomePage.clickOnContinueButtonOnFlightDetailsPage(page);
-  });
-  await test.step("Step 12: Click on First Traveller Edit Button On Traveller Details Page", async () => {
-    await FlightHomePage.clickOnFirstNameEditButton(page);
-  });
-
-  await test.step("Step 13: Verify passport Heading visible", async () => {
-    await FlightHomePage.VerifyPassportHeaderVisible(page);
-  });
-
-  await test.step("Step 14: Verify Passport Error Message visible", async () => {
-    await FlightHomePage.VerifyPassportErrorMessageVisible(page);
-  });
-
-  await test.step("Step 15: Verify Passport Country Error Message visible", async () => {
-    await FlightHomePage.VerifyPassportCountryErrorMessageVisible(page);
-  });
-
-  await test.step("Step 16: Verify Passport Date Error Message visible", async () => {
-    await FlightHomePage.VerifyPassportDateErrorMessageVisible(page);
-  });
-
-  await test.step("Step 18: Enter New Passport Number", async () => {
-    await FlightHomePage.EnterNewTravellerPassportNumber(page, Data.travellername.passport);
-  });
-
-  await test.step("Step 19: Verify Passport Date Error Message visible", async () => {
-    await FlightHomePage.EnterNewTravellerPassportCounty(page, Data.travellername.country);
-  });
-  await test.step("Step 20: Select Expire Date", async () => {
-    await FlightHomePage.selectExpireDateForPassport(page);
-  });
-});
-
-test('SC_008: With and without Add-Ons Selection (Seat/Baggage/Meal) ', { tag: ['@idfc', '@bob','@baggage', '@flaky', '@homepageflight','@common', '@addon', '@regression'] }, async () => {
-  await test.step("Step 1: Enter City From Airport", async () => {
-    await page.waitForTimeout(5000);
-    await FlightHomePage.clickOnCityFromAirport(page);
-    await FlightHomePage.EnterCityFromAirport(page, Data.flightPage.enterCityFrom);
-  })
-
-  await test.step("Step 2: Verify From Airport Dropdown Visible", async () => {
-    await FlightHomePage.VerifyFromAirpotDropdownVisible(page);
-    await FlightHomePage.clickOnFirstSearchResultfromCityDropdown(page);
-  })
-
-  await test.step("Step 3: Enter City To Airport", async () => {
-    await page.waitForTimeout(5000);
-    await FlightHomePage.clickOnToAirport(page);
-    await FlightHomePage.EnterCityToAirport(page, Data.flightPage.enterCityTo);
-  })
-
-  await test.step("Step 4: Verify To Airport Dropdown Visible", async () => {
-    await FlightHomePage.VerifyToAirpotDropdownVisible(page);
-    await FlightHomePage.clickOnfirstSearchResultToCityDropdown(page);
-  })
-
-  await test.step("Step 5: Enter date of departure", async () => {
-    await page.waitForTimeout(5000);
-    await FlightHomePage.clickOnDepartureDate(page);
-    await FlightHomePage.selectTomorrowDateForDeparture(page);
-  })
-
-  await test.step("Step 6: Click and verify travellers and cabin class dropdown", async () => {
-    await page.waitForTimeout(5000);
-    await FlightHomePage.clickOntravellersAndCabinClass(page);
-    await FlightHomePage.VerifytravellersAndCabinClassDropdownVisible(page);
-    await FlightHomePage.clickOntravellersAndCabinClass(page);
-    await FlightHomePage.clickOnCloseTravellersAndCabinClassDropdown(page);
-    await page.waitForTimeout(3000);
-  });
-
-  await test.step("Step 7: Click search flights button", async () => {
-    await FlightHomePage.clickOnSearchFlightsButton(page);
-  });
-
-  await test.step("Step 8: Verify first flight card visible", async () => {
-    await FlightHomePage.VerifyFirstFlightCardVisible(page);
-  });
-
-  await test.step("Step 9: Click on Next Button On Flight Details Page", async () => {
-    await FlightHomePage.clickOnNextButtonOnFlightDetailsPage(page);
-  });
-  await test.step("Step 10: Click on Book Button On Flight Details Page", async () => {
-    await FlightHomePage.clickOnBookButtonOnFlightDetailsPage(page);
-  });
-
-  await test.step("Step 11: Click on Continue Button On Flight Details Page", async () => {
-    await FlightHomePage.clickOnContinueButtonOnFlightDetailsPage(page);
-  });
-
- await test.step("Step 12: Click on First Traveller Edit Button On Traveller Details Page", async () => {
-     await FlightHomePage.clickOnFirstNameEditButton(page);
-   });
-   await test.step("Step 13: Enter First Name of Traveller", async () => {
-     await FlightHomePage.EnterRandomFirstName(page);
-   });
- 
-   await test.step("Step 14: Enter Last Name of Traveller", async () => {
-     await FlightHomePage.EnterLastName(page, Data.travellername.lastName);
-     await FlightHomePage.enterMobileNo(page, Data.travellername.mobileNo);
-     await FlightHomePage.selectPassportDetails(page);
-   });
- 
-   await test.step("Step 15: Click on Add Traveller Button On Traveller Details Page", async () => {
-     const CLIENT = process.env.CLIENT?.toUpperCase();
-     if (CLIENT === 'BOB') {
-       await FlightHomePage.clickOnAddTravellerButton(page);
-     } else if (CLIENT === 'IDFC') {
-       await FlightHomePage.clickOnEditConfirmButtonPage(page);
-     }
-   });
- 
-   await test.step("Step 16: Click on first Traveller Name On Traveller Details Page", async () => {
-     await FlightHomePage.clickOnFirstTravellerName(page);
-   });
- 
-   await test.step("Step 17: Click on continue button On Traveller Details Page", async () => {
-     await FlightHomePage.clickOncontinueButtonOnTravellerPage(page);
-   });
-   
-  await test.step("Step 18: verify Seat Selection Option Visible", async () => {
-    await FlightHomePage.verifySeatSelectionOptionVisible(page);
-  });
-
-  await test.step("Step 19: verify Baggage Selection Option Visible", async () => {
-    await FlightHomePage.verifyBaggageSelectionOptionVisible(page);
-  });
-  await test.step("Step 20: verify Selecting available seat increase price", async () => {
-    await FlightHomePage.verifyPriceIncreasesAfterSeatSelection(page);
-  });
-  await test.step("Step 21: Click on baggage Option", async () => {
-    await FlightHomePage.clickOnbaggageOption(page);
-  });
-  await test.step("Step 22: verify increase the weight increase the price", async () => {
-    await FlightHomePage.verifyPriceIncreasesAfterWeeightIncrease(page);
-  });
-  await test.step("Step 23: Click on Skip Option", async () => {
-    await FlightHomePage.clickOnSkipButton(page);
-  });
-  await test.step("Step 24: verify traveller and add one ", async () => {
-    await FlightHomePage.verifyTravellerAndAddOneHeadingVisible(page);
-  });
-});
 

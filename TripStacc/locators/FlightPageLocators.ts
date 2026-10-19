@@ -47,6 +47,16 @@ export const FlightPageLocators = {
   phoneCopyButton: `//div[@class="calldatabox"]//span[@class="phone_copy"]`,
   emailCopyButton: `//div[@class="calldatabox"]//span[@class="email_copy"]`,
   firstFlightCard: `(//div[contains(@class,'flight') and contains(@class,'Card')])[1]`,
+  // One element per flight/fare on the results page, e.g. <div data-key="1143" data-ai_code="IX1347" class="flightInfoCard">
+  flightResultCards: `//div[contains(@class,'flightInfoCard')]`,
+  // IDFC round trip results: onward/return tabs, one result column per leg (1 = onward, 2 = return)
+  roundTripTab: (segment: 'onward' | 'return') => `//li[contains(@class,"domestic_round_segment") and @data-segment="${segment}"]`,
+  roundTripResultColumn: (leg: number) => `//div[@id="t-w-i-${leg}"]`,
+  roundTripResultRows: (leg: number) => `//div[@id="t-w-i-${leg}"]//div[contains(@class,"rowresult")]`,
+  // Selected/highlighted row gets "user_clicked active"
+  roundTripSelectedRow: (leg: number) => `//div[@id="t-w-i-${leg}"]//div[contains(@class,"rowresult") and contains(@class,"user_clicked") and contains(concat(" ",normalize-space(@class)," ")," active ")]`,
+  // Exact class match: fare modals also contain h4.modal_total_price_footer
+  roundTripFooterTotal: `//h4[contains(concat(" ",normalize-space(@class)," ")," total_price_footer ")]`,
   FligthStopDetails: `(//div[contains(@class,"stoDet stop")])[1]`,
   FlightRefundableText: `(//span[@class="_refundable"])[1] | (//div[text()="Refundable"])[1]`,
   FlightNonRefundableText: `(//span[@class="_nonrefundable"])[1]`,
@@ -93,10 +103,14 @@ export const FlightPageLocators = {
   airlinenameOnFlightDetailsPage: `(//div[@class='a-n airlinename'])[1]`,
   bookNowButtonOnFlightDetailsPage: `(//div[@id="flight_search_result"]//button[text()="Book Now"])[2]`,
   bookButtonOnFairDetailsPage: `//button[contains(@class,"price_strip_footer") and contains(@class,"footer_return_btn")] |(//div[@class="flightInforMain"]//a[contains(text(),"Book Now")])[1]`,
-  // IDFC fare-selection modal; its footer is repeated per trip panel and only one Continue is visible at a time
   fareModal: `//div[@id="elkanio_price"]`,
   fareModalContinueButton: `//div[@id="elkanio_price"]//div[contains(@class,"flbuttonbox")]//button >> visible=true >> nth=0`,
   continueButtonOnFlightDetailsPage:`//button[@id="move_to_pax_details_section"] | //button[@class="bookcont contin_servc_btn"]`,
+  // IDFC "Nearby Airport" modal, shown after Book when the selected flight uses a nearby airport (e.g. NMI for a BOM search)
+  nearbyAirportPopup: `//div[@id="nearbypopup"]`,
+  nearbyAirportConfirmButton: `//button[@id="nearby_popup_confirm"]`,
+  priceChangePopupHeading: `//h4[text()="Price change"]`,
+  priceChangeConfirmButton: `//button[text()="Confirm"] >> visible=true >> nth=0`,
   addnewTravellerButton: `(//button[@class="add_new_btn"])[1]`,
   travellerGenderMR: `//label[text()="Mr."]`,
   FirstNameErrorMessage: `//p[text()="Please enter a valid first name"] | //i[contains(text(),"Please enter a valid first & middle name")]`,
@@ -106,6 +120,8 @@ export const FlightPageLocators = {
   FirstTravellerNameOnSummary: `(//div[@class="flduserbox"])[2] | (//td[@class="seat_pax_name"])[1]`,
   addTravellerButton: `//span[text()="Add Traveller"]`,
   FirstTravellerNameEditButton: `(//button[@class="fld_travel_edit"])[2]`,
+  // The self/only traveller's edit button, for flows that never add a second traveller (unlike index [2] above)
+  SelfTravellerEditButton: `(//button[@class="fld_travel_edit"])[1]`,
   FirstOptionCheckbox: `//div[@class="inputcheckbox"]//label[@for="pax401"]`,
   firstTravellerNameEditConfirmButton: `//span[text()="Confirm"]`,
   travellerEmail: `//h5[text()="Email"]`,

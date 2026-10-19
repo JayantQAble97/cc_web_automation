@@ -1,4 +1,4 @@
-import { expect, Page } from '@playwright/test';
+import { expect, Locator, Page } from '@playwright/test';
 import { FlightPageLocators } from '../../TripStacc/locators/FlightPageLocators';
 import { VerificationHelpers } from '../../utils/verificationHelper';
 import { ElementHelper } from '../../utils/elementHelper';
@@ -172,11 +172,243 @@ static async clickOnFirstSearchResultfromCityDropdown(page: any) {
     }
   }
 
+  // Airports the results page treats as the same city ("Hide nearby airports" filter), e.g. a BOM search can return NMI flights
+  static readonly NEARBY_AIRPORTS: string[][] = [
+    ['BOM', 'NMI'], // Mumbai, Navi Mumbai
+  ];
+
+  static getSameCityAirports(code: string): string[] {
+    return this.NEARBY_AIRPORTS.find(group => group.includes(code)) || [code];
+  }
+
 static async verifyRoute(page: Page, from: string, to: string) {
   const card = page.locator(FlightPageLocators.firstFlightCard);
-  await expect(card).toContainText(from);
-  await expect(card).toContainText(to);
+  for (const [label, code] of [['From', from], ['To', to]]) {
+    const airports = this.getSameCityAirports(code);
+    await expect(card, `First flight card should show ${label} airport ${airports.join(' or ')}`)
+      .toContainText(new RegExp(`\\b(${airports.join('|')})\\b`), { timeout: 10000 });
+  }
 }
+
+  static async verifyFlightResultCardsList(page: Page, cardsToCheck: number = 5) {
+    // Visible only: the inactive trip tab (e.g. return leg) keeps its cards in the DOM
+    const cards = page.locator(FlightPageLocators.flightResultCards).filter({ visible: true });
+    await expect(cards.first(), 'At least one flight result card should be displayed').toBeVisible({ timeout: 60000 });
+    const count = await cards.count();
+    console.log(`Flight result cards displayed: ${count}`);
+
+    const fromCode = this.getAirportCode(this.selectedFromCity);
+    const toCode = this.getAirportCode(this.selectedToCity);
+
+    for (let i = 0; i < Math.min(count, cardsToCheck); i++) {
+      const card = cards.nth(i);
+      const label = `Flight card ${i + 1}`;
+      // Flight number, e.g. "IX-1347" / "6E 123" (airline code has at least one letter, so prices don't match)
+      await expect(card, `${label} should show a flight number`).toContainText(/\b(?:[A-Z]{2}|[A-Z]\d|\d[A-Z])[- ]?\d{1,5}\b/);
+      await expect(card, `${label} should show a price`).toContainText(/₹\s*\d[\d,]*/);
+      const times = (await card.innerText()).match(/\b\d{1,2}:\d{2}\b/g) || [];
+      expect(times.length, `${label} should show departure and arrival times`).toBeGreaterThanOrEqual(2);
+      if (fromCode && toCode) {
+        for (const [side, code] of [['From', fromCode], ['To', toCode]]) {
+          const airports = this.getSameCityAirports(code);
+          await expect(card, `${label} should show ${side} airport ${airports.join(' or ')}`).toContainText(new RegExp(`\\b(${airports.join('|')})\\b`));
+        }
+      }
+      console.log(`${label} OK: ${times[0]} -> ${times[1]}`);
+    }
+
+    // One card per flight/fare: data-key identifies the flight/fare a card represents
+    const keys = await cards.evaluateAll(els => els.map(el => el.getAttribute('data-key') || ''));
+    if (keys.some(key => !key)) {
+      console.log('Skipping duplicate check: flight cards have no data-key attribute');
+      return;
+    }
+    const duplicates = [...new Set(keys.filter((key, i) => keys.indexOf(key) !== i))];
+    expect(duplicates, 'Each flight/fare should be displayed in exactly one card (duplicate data-key)').toEqual([]);
+    console.log(`All ${keys.length} flight cards are unique`);
+  }
+
+  // Reads the From/To values right before a search, so later checks don't rely on cities captured by an earlier test
+  static async captureSelectedCitiesFromSearchForm(page: Page) {
+    if (DeviceHelper.isMobile()) {
+      this.selectedFromCity = '';
+      this.selectedToCity = '';
+      console.log('Mobile: skipping capture of selected cities (desktop search form only)');
+      return;
+    }
+    this.selectedFromCity = (await page.locator(FlightPageLocators.fromCity).inputValue()).trim();
+    this.selectedToCity = (await page.locator(FlightPageLocators.toCity).inputValue()).trim();
+    console.log(`Searching From: "${this.selectedFromCity}" To: "${this.selectedToCity}"`);
+  }
+
+ 
+  static parseFlightCard(text: string) {
+    const flightNo = text.match(/\b(?:[A-Z]{2}|[A-Z]\d|\d[A-Z])[- ]?\d{1,5}\b/);
+    const airline = flightNo
+      ? text.slice(0, flightNo.index).replace(/^\s*Select\b/i, '').split('\n').map(s => s.trim()).filter(Boolean).pop()
+      : undefined;
+    const times = text.match(/\b\d{1,2}:\d{2}\b/g) || [];
+    const hm = text.match(/\b(\d{1,2})\s*h(?:rs?)?(?:\s*(\d{1,2})\s*m(?:in)?)?\b/i);
+    const mOnly = hm ? null : text.match(/\b(\d{1,2})\s*m(?:in)?\b/i);
+    const durationMinutes = hm ? Number(hm[1]) * 60 + Number(hm[2] || 0) : mOnly ? Number(mOnly[1]) : undefined;
+    const stopsMatch = text.match(/\bnon[- ]?stop\b|\b(\d+)\s*stops?\b/i);
+    const stops = stopsMatch ? (stopsMatch[1] ? Number(stopsMatch[1]) : 0) : undefined;
+    const price = text.match(/₹\s*(\d[\d,]*)/);
+    return {
+      airline,
+      flightNumber: flightNo?.[0],
+      departureTime: times[0],
+      arrivalTime: times[1],
+      durationMinutes,
+      durationText: (hm || mOnly)?.[0],
+      stops,
+      stopsText: stopsMatch?.[0],
+      price: price ? Number(price[1].replace(/,/g, '')) : undefined,
+    };
+  }
+
+  static async verifyFlightCardsShowKeyDetails(page: Page, cardsToCheck: number = 5) {
+    const cards = page.locator(FlightPageLocators.flightResultCards).filter({ visible: true });
+    await expect(cards.first(), 'At least one flight result card should be displayed').toBeVisible({ timeout: 60000 });
+    const count = Math.min(await cards.count(), cardsToCheck);
+
+    const fromCode = this.getAirportCode(this.selectedFromCity);
+    const toCode = this.getAirportCode(this.selectedToCity);
+    const toMinutes = (time: string) => { const [h, m] = time.split(':').map(Number); return h * 60 + m; };
+
+    for (let i = 0; i < count; i++) {
+      const text = await cards.nth(i).innerText();
+      const card = this.parseFlightCard(text);
+      const label = `Flight card ${i + 1}`;
+      const detail = `${label} text: ${text.replace(/\s+/g, ' ').trim()}`;
+
+     
+      expect(card.airline, `${label} should show airline name. ${detail}`).toMatch(/[A-Za-z]{2,}/);
+      expect(card.flightNumber, `${label} should show flight number. ${detail}`).toBeTruthy();
+
+      expect(card.departureTime, `${label} should show departure time. ${detail}`).toBeTruthy();
+      expect(card.arrivalTime, `${label} should show arrival time. ${detail}`).toBeTruthy();
+      if (fromCode && toCode) {
+        const originAt = text.search(new RegExp(`\\b(${this.getSameCityAirports(fromCode).join('|')})\\b`));
+        const destinationAt = text.search(new RegExp(`\\b(${this.getSameCityAirports(toCode).join('|')})\\b`));
+        expect(originAt, `${label} should show origin ${this.getSameCityAirports(fromCode).join(' or ')}. ${detail}`).toBeGreaterThanOrEqual(0);
+        expect(destinationAt, `${label} should show destination ${this.getSameCityAirports(toCode).join(' or ')}. ${detail}`).toBeGreaterThanOrEqual(0);
+        expect(originAt, `${label} should show origin before destination. ${detail}`).toBeLessThan(destinationAt);
+      }
+
+     
+      expect(card.durationMinutes, `${label} should show total duration. ${detail}`).toBeGreaterThan(0);
+      expect(card.stops, `${label} should show stop information (Non-Stop / n Stop). ${detail}`).toBeDefined();
+      const elapsed = (toMinutes(card.arrivalTime!) - toMinutes(card.departureTime!) + 1440) % 1440;
+      expect(elapsed, `${label} duration ${card.durationText} should match ${card.departureTime} -> ${card.arrivalTime}. ${detail}`).toBe(card.durationMinutes! % 1440);
+
+  
+      expect(card.price, `${label} should show a price greater than 0. ${detail}`).toBeGreaterThan(0);
+
+      console.log(`${label} OK: ${card.airline} ${card.flightNumber} | ${card.departureTime} -> ${card.arrivalTime} | ${card.durationText} | ${card.stopsText} | ₹${card.price}`);
+    }
+  }
+
+  // Fare type tag on a flight card, e.g. "REFUNDABLE" badge -> "Refundable"
+  static getFareTypeTag(text: string): string | undefined {
+    const tag = text.match(/\b(?:non[- ]?refundable|partially[- ]refundable|refundable)\b/i)?.[0];
+    if (!tag) return undefined;
+    if (/^non/i.test(tag)) return 'Non-Refundable';
+    if (/^partially/i.test(tag)) return 'Partially Refundable';
+    return 'Refundable';
+  }
+
+  static async verifyFlightCardsShowFareType(page: Page, cardsToCheck: number = 5) {
+    // Visible only: on round trip the inactive leg's cards stay in the DOM
+    const cards = page.locator(FlightPageLocators.flightResultCards).filter({ visible: true });
+    await expect(cards.first(), 'At least one flight result card should be displayed').toBeVisible({ timeout: 60000 });
+    const count = Math.min(await cards.count(), cardsToCheck);
+
+    for (let i = 0; i < count; i++) {
+      const text = await cards.nth(i).innerText();
+      const fareType = this.getFareTypeTag(text);
+      expect(fareType, `Flight card ${i + 1} should display a fare type tag (Refundable / Non-Refundable). Card text: ${text.replace(/\s+/g, ' ').trim()}`).toBeTruthy();
+      console.log(`Flight card ${i + 1} fare type: ${fareType}`);
+    }
+  }
+
+  // Flight number and price of a round trip result row, from its hidden .filter_data element
+  static async getRoundTripRowDetails(row: Locator) {
+    const data = row.locator('.filter_data').first();
+    return {
+      flightNumber: (await data.getAttribute('data-flightnumber'))?.trim() || '',
+      price: Number(await data.getAttribute('data-price')),
+    };
+  }
+
+  static async selectReturnFlightAndVerifyFareSummary(page: Page) {
+    const CLIENT = process.env.CLIENT?.toUpperCase();
+    if (CLIENT !== 'IDFC') {
+      console.log(`${CLIENT}: Skipping return flight selection verification (IDFC round trip layout only).`);
+      return;
+    }
+
+    const onwardSelected = page.locator(FlightPageLocators.roundTripSelectedRow(1));
+    await expect(onwardSelected, 'Exactly one onward flight should be selected').toHaveCount(1, { timeout: 30000 });
+    const onward = await this.getRoundTripRowDetails(onwardSelected);
+
+    // Narrow layouts show one leg at a time behind tabs; wide layouts show both columns
+    const returnTab = page.locator(FlightPageLocators.roundTripTab('return'));
+    if (await returnTab.isVisible()) {
+      await returnTab.click();
+      await expect(returnTab, 'Return tab should be active after clicking it').toHaveClass(/\bactive\b/);
+    }
+    const returnColumn = page.locator(FlightPageLocators.roundTripResultColumn(2));
+    await expect(returnColumn, 'Return flights should be displayed').toBeVisible({ timeout: 30000 });
+
+    // Pick a return flight that is not already selected, preferring a different price so the total visibly changes
+    const previousReturn = await this.getRoundTripRowDetails(page.locator(FlightPageLocators.roundTripSelectedRow(2)).first());
+    const returnRows = page.locator(FlightPageLocators.roundTripResultRows(2)).filter({ visible: true });
+    const rowCount = await returnRows.count();
+    let target: Locator | undefined;
+    for (let i = 0; i < rowCount; i++) {
+      const row = returnRows.nth(i);
+      if (/\buser_clicked\b/.test((await row.getAttribute('class')) || '')) continue;
+      target = target || row;
+      if ((await this.getRoundTripRowDetails(row)).price !== previousReturn.price) { target = row; break; }
+    }
+    expect(target, `Need a second return flight to select (found ${rowCount} return flights)`).toBeDefined();
+    const selected = await this.getRoundTripRowDetails(target!);
+    await target!.locator('.flightcardinner').first().click();
+
+    // Highlighted: the clicked row is the one and only selected return flight
+    await expect(target!, `Selected return flight ${selected.flightNumber} should be highlighted`).toHaveClass(/\buser_clicked\b.*\bactive\b|\bactive\b.*\buser_clicked\b/, { timeout: 10000 });
+    await expect(page.locator(FlightPageLocators.roundTripSelectedRow(2)), 'Exactly one return flight should be selected').toHaveCount(1);
+    await expect(onwardSelected, 'Onward selection should stay unchanged').toHaveCount(1);
+    expect((await this.getRoundTripRowDetails(onwardSelected)).flightNumber, 'Onward selection should stay unchanged').toBe(onward.flightNumber);
+
+    // Fare summary: footer total = onward fare + selected return fare
+    const expectedTotal = onward.price + selected.price;
+    const footerTotal = page.locator(FlightPageLocators.roundTripFooterTotal);
+    await expect(footerTotal, `Fare summary total should be onward ₹${onward.price} + return ₹${selected.price}`).toHaveAttribute('data-total_price', String(expectedTotal), { timeout: 10000 });
+    await expect(footerTotal, 'Fare summary should display the updated total').toContainText(expectedTotal.toLocaleString('en-IN'));
+
+    console.log(`Selected return ${selected.flightNumber} (₹${selected.price}) with onward ${onward.flightNumber} (₹${onward.price}); fare summary total ₹${expectedTotal}`);
+  }
+
+  static getAirportCode(cityText: string | undefined): string | undefined {
+    return cityText?.match(/\(([A-Z]{3})\)/)?.[1];
+  }
+
+  static async verifyNavigatedToFlightSearchResults(page: Page, searchFormUrl: string) {
+    await expect(page, 'Search should navigate away from the flight search form').not.toHaveURL(searchFormUrl, { timeout: 60000 });
+    await expect(page.locator(FlightPageLocators.firstFlightCard), 'Flight search results should load').toBeVisible({ timeout: 60000 });
+
+   
+    const fromCode = this.getAirportCode(this.selectedFromCity);
+    const toCode = this.getAirportCode(this.selectedToCity);
+    if (!fromCode || !toCode) {
+      console.log(`Skipping route check: entered airports not captured (From: "${this.selectedFromCity}", To: "${this.selectedToCity}")`);
+      return;
+    }
+    await this.verifyRoute(page, fromCode, toCode);
+    console.log(`Navigated to Flight Search Results (${page.url()}) for route ${fromCode} -> ${toCode}`);
+  }
  
  static async clickOnDepartureDate(page: any) {
     const CLIENT = process.env.CLIENT?.toUpperCase();
@@ -283,12 +515,16 @@ static async clickOnReturnDate(page: any) {
   }
 
   static async VerifytravellersAndCabinClassDropdownVisible(page: any) {
-    if (DeviceHelper.isMobile()) 
+    if (DeviceHelper.isMobile())
     {
       return
    }
     await ElementHelper.waitForElementVisible(page, FlightPageLocators.roomCountDropdown);
     await VerificationHelpers.elementIsVisible(page, FlightPageLocators.roomCountDropdown);
+    // The traveller count is tied to the account on the server, not local browser state, so an earlier
+    // test's unreset passenger count (e.g. SC_003.03) otherwise carries over into whichever test runs next
+    // and compounds across a full suite run until it exceeds the product's 9-passenger search limit.
+    await this.resetTravellersToOneAdult(page);
   }
 
  static async clickOnCloseTravellersAndCabinClassDropdown(page: any) {
@@ -301,10 +537,14 @@ static async clickOnReturnDate(page: any) {
     //   await page.waitForTimeout(5000);
     //   await ElementHelper.clickElement(page, FlightPageLocators.doneTravellerAndCabinButtonMobile);
     // }
-    if (DeviceHelper.isMobile()) 
+    if (DeviceHelper.isMobile())
     {
       return
    }
+    // Apply may or may not close the panel itself; close it via the toggle if it's still open
+    if (await ElementHelper.isElementDisplayed(page, FlightPageLocators.roomCountDropdown)) {
+      await ElementHelper.clickElement(page, FlightPageLocators.travellersAndCabinClass);
+    }
   }
  
 static async verifyFlightSearchFields(page: any) {
@@ -383,6 +623,11 @@ static async VerifyFirstFlightCardVisible(page: any) {
     await ElementHelper.waitForElementVisible(page, FlightPageLocators.firstFlightCard);
     await VerificationHelpers.elementIsVisible(page, FlightPageLocators.firstFlightCard);
 }
+
+  // Some routes (e.g. international) don't auto-select a fare, so Next/Book does nothing until a card is explicitly selected
+  static async clickOnFirstFlightCard(page: any) {
+    await ElementHelper.clickElement(page, FlightPageLocators.firstFlightCard);
+  }
   static async printFlightRoutes(page: Page) {
     const cards = page.locator(FlightPageLocators.FlightRoundTripDetailsBox);
     const count = await cards.count();
@@ -789,33 +1034,85 @@ static async select1StopFilter(page: Page): Promise<void> {
 
   static async clickOnBookButtonOnFlightDetailsPage(page: any) {
     await page.waitForTimeout(3000);
-    // IDFC one-way: "Next" opens the fare modal directly and the footer Continue stays hidden,
-    // so wait for whichever appears first instead of waiting on the footer button alone
+  
     const footerBook = page.locator(FlightPageLocators.bookButtonOnFairDetailsPage);
     const modalContinue = page.locator(FlightPageLocators.fareModalContinueButton);
-    await footerBook.or(modalContinue).filter({ visible: true }).first().waitFor({ state: 'visible', timeout: 60000 });
+    const nearbyConfirm = page.locator(FlightPageLocators.nearbyAirportConfirmButton);
+   
+    await footerBook.or(modalContinue).or(nearbyConfirm).filter({ visible: true }).first().waitFor({ state: 'visible', timeout: 60000 });
+    if (await this.confirmNearbyAirportPopupIfShown(page, 1000)) {
+      await footerBook.or(modalContinue).filter({ visible: true }).first().waitFor({ state: 'visible', timeout: 60000 });
+    }
     if (!(await modalContinue.isVisible())) {
       await ElementHelper.clickElement(page, FlightPageLocators.bookButtonOnFairDetailsPage);
       await page.waitForTimeout(8000);
+      
+      await this.confirmNearbyAirportPopupIfShown(page);
     }
     await this.continueThroughFareModal(page);
+  }
+
+ 
+  static async confirmNearbyAirportPopupIfShown(page: Page, timeout: number = 5000): Promise<boolean> {
+    const confirmButton = page.locator(FlightPageLocators.nearbyAirportConfirmButton);
+    const shown = await confirmButton.waitFor({ state: 'visible', timeout }).then(() => true, () => false);
+    if (!shown) return false;
+    console.log('Nearby Airport popup shown, clicking Confirm');
+    // Modal fade-in can still be animating; fall back to a forced click if the button is covered
+    await confirmButton.click({ timeout: 10000 }).catch(() => confirmButton.click({ force: true }));
+    await expect(page.locator(FlightPageLocators.nearbyAirportPopup), 'Nearby Airport popup should close after Confirm').toBeHidden({ timeout: 30000 });
+  
+    await page.locator(FlightPageLocators.fareModalContinueButton)
+      .or(page.locator(FlightPageLocators.continueButtonOnFlightDetailsPage))
+      .or(page.locator(FlightPageLocators.bookButtonOnFairDetailsPage))
+      .filter({ visible: true }).first()
+      .waitFor({ state: 'visible', timeout: 60000 }).catch(() => console.log('No fare modal or Continue/Book button after Nearby Airport Confirm'));
+    return true;
+  }
+  static async confirmPriceChangePopupIfShown(page: Page, timeout: number = 5000): Promise<boolean> {
+    const heading = page.locator(FlightPageLocators.priceChangePopupHeading);
+    const shown = await heading.waitFor({ state: 'visible', timeout }).then(() => true, () => false);
+    if (!shown) return false;
+    console.log('Price change popup shown, clicking Confirm');
+    const confirmButton = page.locator(FlightPageLocators.priceChangeConfirmButton);
+    await confirmButton.click({ timeout: 10000 }).catch(() => confirmButton.click({ force: true }));
+    await expect(heading, 'Price change popup should close after Confirm').toBeHidden({ timeout: 30000 });
+    return true;
   }
 
   // IDFC fare modal: one-way needs one Continue; round trip needs two (onward fares, then return fares)
   static async continueThroughFareModal(page: any) {
     for (let i = 0; i < 3; i++) {
       const continueLocator = page.locator(FlightPageLocators.fareModalContinueButton);
-      if (!(await continueLocator.isVisible())) break;
+      if (!(await continueLocator.isVisible())) {
+        // The Nearby Airport popup can resurface for the return leg between the two Continues, covering this button
+        const popupConfirmed = await this.confirmNearbyAirportPopupIfShown(page, 2000);
+        if (!popupConfirmed || !(await continueLocator.isVisible())) break;
+      }
       const continueButton = await continueLocator.elementHandle();
       await ElementHelper.clickElement(page, FlightPageLocators.fareModalContinueButton);
-      // The clicked button is hidden (switch to return fares) or detached (navigation to the booking page)
-      await continueButton.waitForElementState('hidden', { timeout: 30000 });
+      await continueButton.waitForElementState('hidden', { timeout: 90000 }).catch(error => {
+        if (!/not attached/i.test(error.message)) throw error;
+      });
     }
   }
 
   static async clickOnContinueButtonOnFlightDetailsPage(page: any) {
+    await this.confirmNearbyAirportPopupIfShown(page, 2000);
+    // A resurfaced popup can leave an unconfirmed fare modal in front of the traveller-details Continue button
+    if (await page.locator(FlightPageLocators.fareModalContinueButton).isVisible()) {
+      await this.continueThroughFareModal(page);
+    }
+    const continueLocator = page.locator(FlightPageLocators.continueButtonOnFlightDetailsPage);
+    await continueLocator.waitFor({ state: 'visible', timeout: 30000 });
+    const continueButton = await continueLocator.elementHandle();
     await ElementHelper.clickElement(page, FlightPageLocators.continueButtonOnFlightDetailsPage);
-    await page.waitForTimeout(3000);
+    // Clicking Continue revalidates the fare lock and can itself re-trigger the "Price change" dialog;
+    // confirm it if shown, otherwise the button sits behind the modal and never becomes hidden/detached.
+    await this.confirmPriceChangePopupIfShown(page, 5000);
+    await continueButton.waitForElementState('hidden', { timeout: 90000 }).catch((error: any) => {
+      if (!/not attached/i.test(error.message)) throw error;
+    });
   }
 
   static selectedFirstName: string;
@@ -1034,14 +1331,48 @@ static async enterMobileNo(page: any, data: any) {
       console.log('BOB: Skipping click On Edit Button Page.');
       break;
 
-    case 'IDFC':
-    await VerificationHelpers.elementIsVisible(page, FlightPageLocators.FirstTravellerNameEditButton);
-    await ElementHelper.clickElement(page, FlightPageLocators.FirstTravellerNameEditButton);
-    break;
+    case 'IDFC': {
+      // VerificationHelpers.elementIsVisible reloads the page on its very first failed attempt, before any
+      // caller gets a chance to react — and that reload re-triggers a "Price change" dialog (stale fare lock
+      // revalidated on reload), with the price climbing further each time, which then blocks the edit button
+      // on the next attempt too. Poll without ever reloading instead, dismissing the dialog inline if it shows.
+      const editButton = page.locator(FlightPageLocators.FirstTravellerNameEditButton);
+      const deadline = Date.now() + 60000;
+      while (!(await editButton.isVisible()) && Date.now() < deadline) {
+        await this.confirmPriceChangePopupIfShown(page, 1000);
+        await page.waitForTimeout(1000);
+      }
+      await expect(editButton, 'First traveller edit button should become visible without a page reload').toBeVisible({ timeout: 5000 });
+      await ElementHelper.clickElement(page, FlightPageLocators.FirstTravellerNameEditButton);
+      break;
+    }
   }
   }
-  
-  
+
+  // For flows that never add a second traveller (e.g. SC_007, SC_008 search with only 1 traveller):
+  // FirstTravellerNameEditButton's index [2] never exists, so this edits the self/only traveller at index [1].
+  static async clickOnSelfTravellerEditButton(page: any) {
+    const CLIENT = process.env.CLIENT?.toUpperCase();
+  switch (CLIENT) {
+    case 'BOB':
+      console.log('BOB: Skipping click On Edit Button Page.');
+      break;
+
+    case 'IDFC': {
+      const editButton = page.locator(FlightPageLocators.SelfTravellerEditButton);
+      const deadline = Date.now() + 60000;
+      while (!(await editButton.isVisible()) && Date.now() < deadline) {
+        await this.confirmPriceChangePopupIfShown(page, 1000);
+        await page.waitForTimeout(1000);
+      }
+      await expect(editButton, 'Self traveller edit button should become visible without a page reload').toBeVisible({ timeout: 5000 });
+      await ElementHelper.clickElement(page, FlightPageLocators.SelfTravellerEditButton);
+      break;
+    }
+  }
+  }
+
+
   static async clickOnFirstOptionCheckbox(page: any) {
     await VerificationHelpers.elementIsVisible(page, FlightPageLocators.FirstOptionCheckbox);
     await ElementHelper.clickElement(page, FlightPageLocators.FirstOptionCheckbox);
