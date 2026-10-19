@@ -2,6 +2,12 @@ name: TripStacc Web IDFC flow
 
 run-name: "TripStacc IDFC ${{ github.event.inputs.environment || 'UAT (Matrix)' }}${{ github.event.inputs.browser && format(' [{0}]', github.event.inputs.browser) || '' }}${{ github.event.inputs.feature && format(' @{0}', github.event.inputs.feature) || '' }}"
 
+# Cancels any older queued/in-progress run of this workflow on the same ref when a new one starts,
+# so re-triggering doesn't pile up stuck queued runs behind each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # Triggers:
 #   1. schedule → daily at 3:00 AM IST, runs a matrix: UAT/Chrome + UAT/Firefox
 #   2. workflow_dispatch → manual run with one specific environment / browser / feature
