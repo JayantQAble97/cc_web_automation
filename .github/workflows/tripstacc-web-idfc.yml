@@ -81,7 +81,7 @@ on:
         type: boolean
         default: false
       schedule_time:
-        description: "New daily run time, IST — HH:MM 24h (03:00) or H:MM AM/PM (3:00 AM) — only used when 'update_schedule' is checked"
+        description: "New daily run time (IST). Examples: 03:00, 15:30, 3:00 AM, 11:45 PM — only used when 'update_schedule' is checked"
         required: false
         default: ""
 
