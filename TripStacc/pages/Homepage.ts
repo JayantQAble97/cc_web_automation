@@ -71,7 +71,7 @@ export class HomePage {
       'Banner active slide': HomePageLocators.bannerActiveSlide,
       'Banner indicators': HomePageLocators.bannerIndicators,
     });
-    // Only the Flights tab banner has previous/next arrows
+  
     if (await page.locator(HomePageLocators.flightSearchArea).isVisible()) {
       await this.softVerifyVisible(page, {
         'Banner previous button': HomePageLocators.bannerPreviousButton,
@@ -101,7 +101,7 @@ export class HomePage {
         'Search hotels button': HomePageLocators.searchHotelsButton,
       });
     }
-    // Recent Searches only appears once the user has search history
+  
     if (await page.locator(HomePageLocators.recentSearchesTitle).isVisible()) {
       await this.softVerifyVisible(page, { 'Recent search card': HomePageLocators.recentSearchCard });
     } else {
@@ -148,8 +148,7 @@ export class HomePage {
     return (await page.locator(HomePageLocators.bannerActiveSlideImage).getAttribute('src')) ?? '';
   }
 
-  // BOB's UAT home page does not render a hero carousel or "Best offer for you" cards at all (confirmed via DOM -
-  // the rest of the page, including Exclusive Benefits and FAQ, loads fully); only IDFC has this promo rail today.
+
   static heroBannerAndOffersApplicable(): boolean {
     const CLIENT = process.env.CLIENT?.toUpperCase();
     switch (CLIENT) {
@@ -160,7 +159,7 @@ export class HomePage {
     }
   }
 
-  // Hero banner rotates on a timer; assert the active slide image actually changes rather than specific copy
+
   static async verifyBannerSlideRotates(page: Page): Promise<void> {
     const initialSrc = await this.getBannerActiveSlideImageSrc(page);
     await page.waitForTimeout(8000);
@@ -188,7 +187,7 @@ export class HomePage {
     await expect.soft(afterPrevious, 'Clicking Previous should change the active banner slide image again').not.toBe(afterNext);
   }
 
-  // Returns the visible offer card texts so callers can compare Flights-tab vs Hotels-tab offers
+
   static async verifyBestOfferCardsDisplayed(page: Page): Promise<string[]> {
     const section = page.locator(HomePageLocators.bestOffersSection);
     await expect.soft(section, 'Best offer for you section should be visible').toBeVisible();
@@ -225,11 +224,7 @@ export class HomePage {
     await expect.soft(hotelTabOffers.join('|'), 'Hotel-tab offers should differ from flight-tab offers').not.toBe(flightTabOffers.join('|'));
   }
 
-  // Expands then collapses the first visible question within a given FAQ panel.
-  // Note: role="tab" sits on the outer <div class="panel-heading">; the clickable toggle is the inner <a data-toggle="collapse">.
-  // href is used (not aria-controls) to find the matching panel: on BOB every question's aria-controls is hardcoded to
-  // "collapseOne" (a copy-pasted CMS template bug, confirmed by DOM inspection - headingOne/collapseOne repeat on every item),
-  // while href correctly points at each question's own unique panel id on both BOB and IDFC.
+
   static async verifyFaqAccordionExpandCollapse(page: Page, panelLocator: string): Promise<void> {
     const question = page.locator(`${panelLocator}//a[@data-toggle="collapse"] >> visible=true >> nth=0`);
     await question.scrollIntoViewIfNeeded();
@@ -247,9 +242,7 @@ export class HomePage {
     await this.verifyFaqAriaExpanded(question, 'false');
   }
 
-  // BOB's FAQ markup ships every question with a hardcoded aria-expanded="true" regardless of actual state (same CMS
-  // template bug as aria-controls), so that attribute can't be trusted there - panel visibility (checked above) is
-  // the only reliable signal on BOB. IDFC's aria-expanded does correctly track real state, so it's still asserted there.
+
   private static async verifyFaqAriaExpanded(question: Locator, expected: 'true' | 'false'): Promise<void> {
     const CLIENT = process.env.CLIENT?.toUpperCase();
     switch (CLIENT) {
@@ -266,13 +259,13 @@ export class HomePage {
     await this.softVerifyVisible(page, { 'FAQ section': HomePageLocators.faqSection });
     await expect.soft(page.locator(HomePageLocators.faqCategoryTabs), 'FAQ should have General, Flights and Hotels tabs').toHaveCount(3);
 
-    // General tab (default selected)
+  
     await expect.soft(page.locator(HomePageLocators.faqGeneralPanel), 'General FAQ panel should be visible by default').toBeVisible();
     const generalCount = await page.locator(`${HomePageLocators.faqGeneralPanel}//*[@role="tab"]`).count();
     await expect.soft(generalCount, 'General FAQ panel should list at least one question').toBeGreaterThan(0);
     await this.verifyFaqAccordionExpandCollapse(page, HomePageLocators.faqGeneralPanel);
 
-    // Flights tab
+  
     await ElementHelper.clickElement(page, HomePageLocators.faqFlightsTab);
     await expect.soft(page.locator(HomePageLocators.faqFlightsPanel), 'Flights FAQ panel should become visible').toBeVisible();
     await expect.soft(page.locator(HomePageLocators.faqGeneralPanel), 'General FAQ panel should hide once Flights tab is selected').toBeHidden();
@@ -280,7 +273,7 @@ export class HomePage {
     await expect.soft(flightsCount, 'Flights FAQ panel should list at least one question').toBeGreaterThan(0);
     await this.verifyFaqAccordionExpandCollapse(page, HomePageLocators.faqFlightsPanel);
 
-    // Hotels tab
+  
     await ElementHelper.clickElement(page, HomePageLocators.faqHotelsTab);
     await expect.soft(page.locator(HomePageLocators.faqHotelsPanel), 'Hotels FAQ panel should become visible').toBeVisible();
     await expect.soft(page.locator(HomePageLocators.faqFlightsPanel), 'Flights FAQ panel should hide once Hotels tab is selected').toBeHidden();

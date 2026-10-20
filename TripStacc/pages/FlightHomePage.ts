@@ -654,6 +654,54 @@ static async VerifyFirstFlightCardVisible(page: any) {
   }
 
 
+  static async clickOnSortTab(page: any) {
+    await ElementHelper.clickElement(page, FlightPageLocators.sortTabButton);
+  }
+
+  static async selectSortPriceLowToHigh(page: any) {
+    await ElementHelper.clickElement(page, FlightPageLocators.sortPriceLowToHigh);
+  }
+
+  static async selectSortPriceHighToLow(page: any) {
+    await ElementHelper.clickElement(page, FlightPageLocators.sortPriceHighToLow);
+  }
+
+  // Verifies all 8 Sort tab options (Price/Duration/Departure/Arrival x Low-High/High-Low) are displayed
+  static async verifyAllSortOptionsDisplayed(page: Page) {
+    const sortOptions: Array<[string, string]> = [
+      ['Price: Low to High', FlightPageLocators.sortPriceLowToHigh],
+      ['Price: High to Low', FlightPageLocators.sortPriceHighToLow],
+      ['Duration: Shortest', FlightPageLocators.sortDurationShortest],
+      ['Duration: Longest', FlightPageLocators.sortDurationLongest],
+      ['Departure: Earliest', FlightPageLocators.sortDepartureEarliest],
+      ['Departure: Latest', FlightPageLocators.sortDepartureLatest],
+      ['Arrival: Earliest', FlightPageLocators.sortArrivalEarliest],
+      ['Arrival: Latest', FlightPageLocators.sortArrivalLatest],
+    ];
+    for (const [label, locator] of sortOptions) {
+      await expect(page.locator(locator), `Sort option "${label}" should be displayed`).toBeVisible({ timeout: 15000 });
+      console.log(`Sort option displayed: ${label}`);
+    }
+  }
+
+  static async verifyFlightCardsSortedByPrice(page: Page, order: 'asc' | 'desc', cardsToCheck: number = 10) {
+    const cards = page.locator(FlightPageLocators.flightResultCards).filter({ visible: true });
+    await expect(cards.first(), 'At least one flight result card should be displayed').toBeVisible({ timeout: 30000 });
+    const count = Math.min(await cards.count(), cardsToCheck);
+
+    const prices: number[] = [];
+    for (let i = 0; i < count; i++) {
+      const text = await cards.nth(i).innerText();
+      const price = this.parseFlightCard(text).price;
+      expect(price, `Flight card ${i + 1} should show a price. Card text: ${text.replace(/\s+/g, ' ').trim()}`).toBeTruthy();
+      prices.push(price!);
+    }
+
+    const sortedPrices = [...prices].sort((a, b) => order === 'asc' ? a - b : b - a);
+    expect(prices, `Flight cards should be sorted by price ${order === 'asc' ? 'ascending (Low to High)' : 'descending (High to Low)'}. Got: ${prices.join(', ')}`).toEqual(sortedPrices);
+    console.log(`Verified ${prices.length} flight cards sorted by price (${order}): ${prices.join(', ')}`);
+  }
+
   static async VerifyStopsTabVisible(page: any) {
     await ElementHelper.waitForElementVisible(page, FlightPageLocators.filterTabStops);
     await VerificationHelpers.elementIsVisible(page, FlightPageLocators.filterTabStops);
@@ -1052,7 +1100,27 @@ static async select1StopFilter(page: Page): Promise<void> {
     await this.continueThroughFareModal(page);
   }
 
- 
+  // Same first half as clickOnBookButtonOnFlightDetailsPage (clicks the same footer_return_btn button and
+  // handles the Nearby Airport popup), but stops once the onward-leg fare modal opens instead of
+  // auto-continuing through it — lets a round trip test verify/select fares per leg (see TC-37975)
+  static async openFareDetailsForOnwardLeg(page: any) {
+    await page.waitForTimeout(3000);
+
+    const footerBook = page.locator(FlightPageLocators.bookButtonOnFairDetailsPage);
+    const modalContinue = page.locator(FlightPageLocators.fareModalContinueButton);
+    const nearbyConfirm = page.locator(FlightPageLocators.nearbyAirportConfirmButton);
+
+    await footerBook.or(modalContinue).or(nearbyConfirm).filter({ visible: true }).first().waitFor({ state: 'visible', timeout: 60000 });
+    if (await this.confirmNearbyAirportPopupIfShown(page, 1000)) {
+      await footerBook.or(modalContinue).filter({ visible: true }).first().waitFor({ state: 'visible', timeout: 60000 });
+    }
+    if (!(await modalContinue.isVisible())) {
+      await ElementHelper.clickElement(page, FlightPageLocators.bookButtonOnFairDetailsPage);
+      await page.waitForTimeout(8000);
+      await this.confirmNearbyAirportPopupIfShown(page);
+    }
+  }
+
   static async confirmNearbyAirportPopupIfShown(page: Page, timeout: number = 5000): Promise<boolean> {
     const confirmButton = page.locator(FlightPageLocators.nearbyAirportConfirmButton);
     const shown = await confirmButton.waitFor({ state: 'visible', timeout }).then(() => true, () => false);
@@ -1080,12 +1148,69 @@ static async select1StopFilter(page: Page): Promise<void> {
     return true;
   }
 
-  // IDFC fare modal: one-way needs one Continue; round trip needs two (onward fares, then return fares)
+  // Verifies each fare/service option card (e.g. "Regular Fare", "NDC_Value") shows its inclusions (Cabin/Check-in/Meal) and a price
+  static async verifyFareOptionsDisplayed(page: Page) {
+    // Visible only: the other leg's fare cards can already be in the DOM, just hidden, before Continue is clicked
+    const cards = page.locator(FlightPageLocators.fareOptionCards).filter({ visible: true });
+    await expect(cards.first(), 'At least one fare option should be displayed').toBeVisible({ timeout: 30000 });
+    const count = await cards.count();
+
+    for (let i = 0; i < count; i++) {
+      const card = cards.nth(i);
+      const fareName = (await card.locator('h4').innerText()).trim();
+      const cabin = (await card.locator('.entbox', { hasText: 'Cabin' }).innerText()).replace(/Cabin:/i, '').trim();
+      const checkIn = (await card.locator('.entbox', { hasText: 'Check-in' }).innerText()).replace(/Check-in:/i, '').trim();
+      const meal = (await card.locator('.entbox', { hasText: 'Meal' }).innerText()).replace(/Meal:/i, '').trim();
+      const price = Number(await card.locator('.flightRate').getAttribute('data-price'));
+
+      expect(fareName, `Fare option ${i + 1} should show a fare name`).toBeTruthy();
+      expect(cabin, `${fareName} should show the Cabin baggage inclusion`).toBeTruthy();
+      expect(checkIn, `${fareName} should show the Check-in baggage inclusion`).toBeTruthy();
+      expect(meal, `${fareName} should show the Meal inclusion`).toBeTruthy();
+      expect(price, `${fareName} should show a price greater than 0`).toBeGreaterThan(0);
+
+      console.log(`Fare option "${fareName}": Cabin=${cabin}, Check-in=${checkIn}, Meal=${meal}, Price=₹${price}`);
+    }
+  }
+
+  static async selectFareOptionAndVerifySelected(page: Page, index: number = 1) {
+    const cards = page.locator(FlightPageLocators.fareOptionCards).filter({ visible: true });
+    const target = cards.nth(index);
+    const fareName = (await target.locator('h4').innerText()).trim();
+    await target.click();
+    await expect(target, `Fare option "${fareName}" should become selected after clicking it`).toHaveClass(/\bactive\b/, { timeout: 10000 });
+    console.log(`Selected fare option "${fareName}"`);
+  }
+
+  // Round trip fare modal: switches to the return leg's fare carousel via its tab (no Continue click needed)
+  static async clickOnFareModalReturnTab(page: any) {
+    await ElementHelper.clickElement(page, FlightPageLocators.fareModalReturnTab);
+  }
+
+  // Confirms the modal's fare summary total matches whichever fare option is currently selected
+  static async verifyFareSummaryReflectsSelectedFare(page: Page) {
+    // Round trip: the footer total is onward's selected fare + return's selected fare combined, not just
+    // whichever leg's carousel is currently visible — so sum every selected card (one active card per leg)
+    const selectedCards = page.locator(FlightPageLocators.fareOptionCardSelected);
+    const count = await selectedCards.count();
+    expect(count, 'At least one fare option should be selected').toBeGreaterThan(0);
+
+    let expectedTotal = 0;
+    for (let i = 0; i < count; i++) {
+      expectedTotal += Number(await selectedCards.nth(i).locator('.flightRate').getAttribute('data-price'));
+    }
+
+    const footerText = await page.locator(FlightPageLocators.fareModalFooterTotalPrice).innerText();
+    const footerPrice = Number(footerText.replace(/[^\d]/g, ''));
+
+    expect(footerPrice, `Fare summary total (₹${footerPrice}) should equal the sum of selected fares (₹${expectedTotal})`).toBe(expectedTotal);
+    console.log(`Fare summary ₹${footerPrice} matches sum of selected fares ₹${expectedTotal}`);
+  }
+
   static async continueThroughFareModal(page: any) {
     for (let i = 0; i < 3; i++) {
       const continueLocator = page.locator(FlightPageLocators.fareModalContinueButton);
       if (!(await continueLocator.isVisible())) {
-        // The Nearby Airport popup can resurface for the return leg between the two Continues, covering this button
         const popupConfirmed = await this.confirmNearbyAirportPopupIfShown(page, 2000);
         if (!popupConfirmed || !(await continueLocator.isVisible())) break;
       }
@@ -1095,6 +1220,17 @@ static async select1StopFilter(page: Page): Promise<void> {
         if (!/not attached/i.test(error.message)) throw error;
       });
     }
+  }
+
+  // Single Continue click on the fare modal (vs. continueThroughFareModal's up-to-3-clicks loop) — for a round
+  // trip, clicking this once on the onward-leg fare modal reveals the return-leg fare modal in its place
+  static async clickOnFareModalContinueButton(page: any) {
+    const continueLocator = page.locator(FlightPageLocators.fareModalContinueButton);
+    const continueButton = await continueLocator.elementHandle();
+    await ElementHelper.clickElement(page, FlightPageLocators.fareModalContinueButton);
+    await continueButton.waitForElementState('hidden', { timeout: 90000 }).catch((error: any) => {
+      if (!/not attached/i.test(error.message)) throw error;
+    });
   }
 
   static async clickOnContinueButtonOnFlightDetailsPage(page: any) {
@@ -1107,8 +1243,6 @@ static async select1StopFilter(page: Page): Promise<void> {
     await continueLocator.waitFor({ state: 'visible', timeout: 30000 });
     const continueButton = await continueLocator.elementHandle();
     await ElementHelper.clickElement(page, FlightPageLocators.continueButtonOnFlightDetailsPage);
-    // Clicking Continue revalidates the fare lock and can itself re-trigger the "Price change" dialog;
-    // confirm it if shown, otherwise the button sits behind the modal and never becomes hidden/detached.
     await this.confirmPriceChangePopupIfShown(page, 5000);
     await continueButton.waitForElementState('hidden', { timeout: 90000 }).catch((error: any) => {
       if (!/not attached/i.test(error.message)) throw error;
@@ -1742,7 +1876,7 @@ static async clickOnFirstTraveller(page: any) {
     console.log('BOB: Skipping ');
     break;
     case 'IDFC':
-  await page.click(`(//div[contains(@class,'inputcheckbox')]//label)[2]`)
+  await ElementHelper.clickElement(page, `(//div[contains(@class,'inputcheckbox')]//label)[2]`)
     break;
   }
 }
@@ -1754,11 +1888,22 @@ static async clickOncontinueButtonOnTravellerPage(page: any) {
     console.log('BOB: Skipping ');
     break;
     case 'IDFC':
-    await VerificationHelpers.elementIsVisible(page, FlightPageLocators.travellerDetailsPageContinuebutton);
-    await ElementHelper.clickElement(page, FlightPageLocators.travellerDetailsPageContinuebutton);
+    await VerificationHelpers.elementIsVisible(page, FlightPageLocators.continueButtonOnFlightDetailsPage);
+    await ElementHelper.clickElement(page, FlightPageLocators.continueButtonOnFlightDetailsPage);
     await page.waitForTimeout(3000);
     break;
   }
+}
+
+// Traveller Details page's own Continue button. Uses the existing travellerDetailsPageContinuebutton
+// locator directly (it was defined but never wired to a method) — clickOncontinueButtonOnTravellerPage
+// above uses continueButtonOnFlightDetailsPage instead, which is the wrong button here and resets the
+// page back to an empty traveller selection, so this is a separate method rather than a fix to that
+// shared one (which other tests already depend on).
+static async clickOnTravellerDetailsContinueButton(page: any) {
+  await VerificationHelpers.elementIsVisible(page, FlightPageLocators.travellerDetailsPageContinuebutton);
+  await ElementHelper.clickElement(page, FlightPageLocators.travellerDetailsPageContinuebutton);
+  await page.waitForTimeout(3000);
 }
 
 static async travellersAndAddonsContinueButton(page: any) {
@@ -1803,6 +1948,13 @@ static async verifyPriceIncreasesAfterSeatSelection(page: any) {
     expect(afterPrice).toBeGreaterThan(beforePrice);
     console.log(`Price Increased By ₹${afterPrice - beforePrice}`);
   }
+}
+
+// Selects the first available Column A seat (a free "freebox" seat — availableSeat/
+// verifyPriceIncreasesAfterSeatSelection above only target paid "extrapayhigh" seats)
+static async clickOnAvailableSeatColumnA(page: any) {
+  await VerificationHelpers.elementIsVisible(page, FlightPageLocators.availableSeatColumnA);
+  await ElementHelper.clickElement(page, FlightPageLocators.availableSeatColumnA);
 }
 
 static async clickOnbaggageOption(page: any) {

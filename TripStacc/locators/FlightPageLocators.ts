@@ -71,6 +71,15 @@ export const FlightPageLocators = {
   filterTabLayoverAirports: `(//a[text()="Layover Airports "])[1]`,
   filterApplyButton: `(//button[text()="Apply"])[1]`,
   filterClearButton: `(//button[text()="Clear All"])[1]`,
+  sortTabButton: `//a[@href="#Sort"]`,
+  sortPriceLowToHigh: `//div[@data-sort="price_l2h_filter"]`,
+  sortPriceHighToLow: `//div[@data-sort="price_h2l_filter"]`,
+  sortDurationShortest: `//div[@data-sort="duration_l2h_filter"]`,
+  sortDurationLongest: `//div[@data-sort="duration_h2l_filter"]`,
+  sortDepartureEarliest: `//div[@data-sort="dep_l2h_filter"]`,
+  sortDepartureLatest: `//div[@data-sort="dep_h2l_filter"]`,
+  sortArrivalEarliest: `//div[@data-sort="arr_l2h_filter"]`,
+  sortArrivalLatest: `//div[@data-sort="arr_h2l_filter"]`,
   filterNonStop: `(//div[@class="filterboxcontent"]//label[text()="Non-stop"])[1] | (//div[@class="stopbig"])[1]`,
   filter1Stop: `(//div[@class="filterboxcontent"]//label[text()="1 Stop"])[1] | (//div[@class="stopbig"])[2]`,
   filter1PlusStop: `(//div[@class="filterboxcontent"]//label[text()="1+ Stops"])[1]`,
@@ -105,8 +114,11 @@ export const FlightPageLocators = {
   bookButtonOnFairDetailsPage: `//button[contains(@class,"price_strip_footer") and contains(@class,"footer_return_btn")] |(//div[@class="flightInforMain"]//a[contains(text(),"Book Now")])[1]`,
   fareModal: `//div[@id="elkanio_price"]`,
   fareModalContinueButton: `//div[@id="elkanio_price"]//div[contains(@class,"flbuttonbox")]//button >> visible=true >> nth=0`,
+  fareOptionCards: `//div[@id="elkanio_price"]//div[contains(@class,"servicePriceBox")]`,
+  fareOptionCardSelected: `//div[@id="elkanio_price"]//div[contains(@class,"servicePriceBox") and contains(@class,"active")]`,
+  fareModalReturnTab: `//span[@id="return_multi_popup"]`,
+  fareModalFooterTotalPrice: `//h4[contains(@class,"modal_total_price_footer")] >> visible=true >> nth=0`,
   continueButtonOnFlightDetailsPage:`//button[@id="move_to_pax_details_section"] | //button[@class="bookcont contin_servc_btn"]`,
-  // IDFC "Nearby Airport" modal, shown after Book when the selected flight uses a nearby airport (e.g. NMI for a BOM search)
   nearbyAirportPopup: `//div[@id="nearbypopup"]`,
   nearbyAirportConfirmButton: `//button[@id="nearby_popup_confirm"]`,
   priceChangePopupHeading: `//h4[text()="Price change"]`,
@@ -156,7 +168,6 @@ export const FlightPageLocators = {
  bookingId: `//span[@id='copy_ref'] | (//td[@class='bookng_id']//span)[2]`,
 
 bookingDate: `//div[@class='travell_info']//p | (//td[@class='bookng_date bookng_date_flt dt_orde'])[1]`,
-
   flightDropdown: `//div[@class='cnf_flt_top']`,
   flightName: `(//div[@class='fltcod'])[1]`,
   departureCity: `(//p[@class='flt_cityname'])[1]`,
@@ -178,6 +189,9 @@ bookingDate: `//div[@class='travell_info']//p | (//td[@class='bookng_date bookng
 baggageSelectionOption: "//li[@class='baggage_li'] | //a[@class='btn btn-sm btn-default baggage_tab']",
   seatMapContainer: '(//div[@class="seatselaction_innerbox"])[1]',
   availableSeat: '(//div[@class="columninnebox extrapayhigh"])[1] | (//div[@class=" choose_seat  seat_popup"])[1]',
+  // First available (data-availability="1") Column A seat — availableSeat above only matches extra-pay
+  // seats (class "extrapayhigh"); free seats are class "freebox" and identified by data-seat_number
+  availableSeatColumnA: `(//div[contains(@class,"rowcolumn") and @data-availability="1" and contains(@data-seat_number,"A")])[1]//div[contains(@class,"columninnebox")]`,
   UnavailableSeat: '(//div[@class="columninnebox Unavailable"])[1]',
   unvailableSeatErrorMessage: `(//p[text()="Sorry! This seat is taken"])[1]`,
   seatPrice: `(//h4[contains(@class,'fl_det_footer') and contains(text(),'₹')])[3] | //span[@class='grandtotal_after_red grandtotal_after_red_ga']`,

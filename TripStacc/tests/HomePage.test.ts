@@ -18,7 +18,7 @@ test.afterEach(async () => {
 });
 
 test('TS_HP_001: Validate promotional offers / rewards banners are displayed', { tag: ['@idfc', '@bob', '@common', '@homepage', '@smoke', '@sanity'] }, async () => {
-  // BOB's UAT home page has no hero carousel / "Best offer for you" cards today - only Exclusive Benefits + FAQ apply there.
+ 
   const heroBannerApplicable = HomePage.heroBannerAndOffersApplicable();
   let flightTabOffers: string[] = [];
 
