@@ -35,46 +35,6 @@ on:
         description: "Feature tag without @ (e.g. loginpage, Smoke, Sanity)"
         required: false
         default: ""
-      run_all_tests:
-        description: "Run ALL test files (overrides the individual test file checkboxes below)"
-        required: false
-        type: boolean
-        default: true
-      test_BookingConfirmation:
-        description: "Test file: BookingConfirmation.test.ts"
-        required: false
-        type: boolean
-        default: false
-      test_CheckoutPage:
-        description: "Test file: CheckoutPage.test.ts"
-        required: false
-        type: boolean
-        default: false
-      test_FlightPage:
-        description: "Test file: FlightPage.test.ts"
-        required: false
-        type: boolean
-        default: false
-      test_HomePage:
-        description: "Test file: HomePage.test.ts"
-        required: false
-        type: boolean
-        default: false
-      test_HotelPage:
-        description: "Test file: HotelPage.test.ts"
-        required: false
-        type: boolean
-        default: false
-      test_LoginPage:
-        description: "Test file: LoginPage.test.ts"
-        required: false
-        type: boolean
-        default: false
-      test_MyAccountPage:
-        description: "Test file: MyAccountPage.test.ts"
-        required: false
-        type: boolean
-        default: false
       update_schedule:
         description: "Schedule — check to apply the run time below as the new nightly schedule (field below is ignored if unchecked)"
         required: false
@@ -224,14 +184,6 @@ jobs:
       ENVIRONMENT: ${{ matrix.environment }}
       BROWSER: ${{ matrix.browser }}
       FEATURE_TAG: ${{ github.event.inputs.feature || '' }}
-      RUN_ALL_TESTS: ${{ github.event.inputs.run_all_tests || 'true' }}
-      TEST_BookingConfirmation: ${{ github.event.inputs.test_BookingConfirmation || 'false' }}
-      TEST_CheckoutPage: ${{ github.event.inputs.test_CheckoutPage || 'false' }}
-      TEST_FlightPage: ${{ github.event.inputs.test_FlightPage || 'false' }}
-      TEST_HomePage: ${{ github.event.inputs.test_HomePage || 'false' }}
-      TEST_HotelPage: ${{ github.event.inputs.test_HotelPage || 'false' }}
-      TEST_LoginPage: ${{ github.event.inputs.test_LoginPage || 'false' }}
-      TEST_MyAccountPage: ${{ github.event.inputs.test_MyAccountPage || 'false' }}
       EMAIL_TO: ${{ github.event_name == 'workflow_dispatch' && 'jignesh.shah@customer-capital.com' || 'dharm.vrat@customer-capital.com' }}
 
     steps:
@@ -268,24 +220,8 @@ jobs:
           PROJECT_VAL="tripstacc-${BP}-${ENVIRONMENT}${FEATURE_TAG:+-${FEATURE_TAG}}"
           echo "PROJECT=$PROJECT_VAL"
 
-          TEST_TARGETS=""
-          if [ "$RUN_ALL_TESTS" != "true" ]; then
-            if [ "$TEST_BookingConfirmation" = "true" ]; then TEST_TARGETS="$TEST_TARGETS TripStacc/tests/BookingConfirmation.test.ts"; fi
-            if [ "$TEST_CheckoutPage" = "true" ]; then TEST_TARGETS="$TEST_TARGETS TripStacc/tests/CheckoutPage.test.ts"; fi
-            if [ "$TEST_FlightPage" = "true" ]; then TEST_TARGETS="$TEST_TARGETS TripStacc/tests/FlightPage.test.ts"; fi
-            if [ "$TEST_HomePage" = "true" ]; then TEST_TARGETS="$TEST_TARGETS TripStacc/tests/HomePage.test.ts"; fi
-            if [ "$TEST_HotelPage" = "true" ]; then TEST_TARGETS="$TEST_TARGETS TripStacc/tests/HotelPage.test.ts"; fi
-            if [ "$TEST_LoginPage" = "true" ]; then TEST_TARGETS="$TEST_TARGETS TripStacc/tests/LoginPage.test.ts"; fi
-            if [ "$TEST_MyAccountPage" = "true" ]; then TEST_TARGETS="$TEST_TARGETS TripStacc/tests/MyAccountPage.test.ts"; fi
-          fi
-          if [ -z "$TEST_TARGETS" ]; then
-            TEST_TARGETS="TripStacc/tests"
-          fi
-          echo "TEST_TARGETS=$TEST_TARGETS"
-          echo "test_targets=$TEST_TARGETS" >> "$GITHUB_OUTPUT"
-
           set +e
-          CLIENT="$CLIENT" PROJECT="$PROJECT_VAL" npx playwright test $TEST_TARGETS \
+          CLIENT="$CLIENT" PROJECT="$PROJECT_VAL" npx playwright test TripStacc/tests \
             --config=playwright.config.ts --workers=1 --retries=1
           EXIT_CODE=$?
           set -e
@@ -351,7 +287,6 @@ jobs:
           md += '| **Flaky** | ⚠️ ${{ steps.stats.outputs.flaky }} |\n';
           md += '| **Duration** | ⏱️ ${{ steps.stats.outputs.duration }} |\n';
           md += '| **Browser** | ${{ env.BROWSER }} |\n';
-          md += '| **Test files** | \`${{ steps.run-tests.outputs.test_targets }}\` |\n';
           md += '| **Branch** | \`${{ github.ref_name }}\` |\n';
           md += '| **Commit** | \`' + '${{ github.sha }}'.substring(0, 7) + '\` |\n\n';
           const failPath = '/tmp/failures.json';
@@ -446,8 +381,7 @@ jobs:
                 <tr><td style="font-weight:bold">Flaky</td><td>⚠️ ${{ steps.stats.outputs.flaky }}</td></tr>
                 <tr style="background:#f5f5f5"><td style="font-weight:bold">Duration</td><td>⏱️ ${{ steps.stats.outputs.duration }}</td></tr>
                 <tr><td style="font-weight:bold">Browser</td><td>${{ env.BROWSER }}</td></tr>
-                <tr style="background:#f5f5f5"><td style="font-weight:bold">Test files</td><td>${{ steps.run-tests.outputs.test_targets }}</td></tr>
-                <tr><td style="font-weight:bold">Branch</td><td>${{ github.ref_name }}</td></tr>
+                <tr style="background:#f5f5f5"><td style="font-weight:bold">Branch</td><td>${{ github.ref_name }}</td></tr>
                 <tr><td style="font-weight:bold">Triggered by</td><td>${{ github.actor }}</td></tr>
               </table>
               <p style="margin-top:16px">
