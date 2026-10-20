@@ -76,12 +76,12 @@ on:
         type: boolean
         default: false
       update_schedule:
-        description: "Compute a new daily nightly schedule time (shown in job summary — you apply it to the YAML manually)"
+        description: "Schedule — check to apply the run time below as the new nightly schedule (field below is ignored if unchecked)"
         required: false
         type: boolean
         default: false
       schedule_time:
-        description: "New daily run time (IST). Examples: 03:00, 15:30, 3:00 AM, 11:45 PM — only used when 'update_schedule' is checked"
+        description: "New daily run time (IST), used only if 'Schedule' above is checked. Examples: 03:00, 15:30, 3:00 AM, 11:45 PM"
         required: false
         default: ""
 
