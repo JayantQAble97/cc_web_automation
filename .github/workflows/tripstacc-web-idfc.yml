@@ -9,13 +9,13 @@ concurrency:
   cancel-in-progress: true
 
 # Triggers:
-#   1. schedule → currently disabled (see commented-out block below) — re-enable by uncommenting
+#   1. schedule → daily at 3:00 AM IST, runs a matrix: UAT/Chrome + UAT/Firefox
 #   2. workflow_dispatch → manual run with one specific environment / browser / feature
 
 on:
-  # schedule:
-  #   # 3:00 AM IST = 21:30 UTC (previous calendar day)
-  #   - cron: "30 21 * * *"
+  schedule:
+    # 3:00 AM IST = 21:30 UTC (previous calendar day)
+    - cron: "30 21 * * *"
 
   workflow_dispatch:
     inputs:
