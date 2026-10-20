@@ -35,65 +35,6 @@ on:
         description: "Feature tag without @ (e.g. loginpage, Smoke, Sanity)"
         required: false
         default: ""
-      update_schedule:
-        description: "Schedule — check to apply the run time below as the new nightly schedule (field below is ignored if unchecked)"
-        required: false
-        type: boolean
-        default: false
-      schedule_time:
-        description: "New daily run time (IST) — used only if 'Schedule' above is checked"
-        required: false
-        type: choice
-        default: "03:00 AM"
-        options:
-          - "12:00 AM"
-          - "12:30 AM"
-          - "01:00 AM"
-          - "01:30 AM"
-          - "02:00 AM"
-          - "02:30 AM"
-          - "03:00 AM"
-          - "03:30 AM"
-          - "04:00 AM"
-          - "04:30 AM"
-          - "05:00 AM"
-          - "05:30 AM"
-          - "06:00 AM"
-          - "06:30 AM"
-          - "07:00 AM"
-          - "07:30 AM"
-          - "08:00 AM"
-          - "08:30 AM"
-          - "09:00 AM"
-          - "09:30 AM"
-          - "10:00 AM"
-          - "10:30 AM"
-          - "11:00 AM"
-          - "11:30 AM"
-          - "12:00 PM"
-          - "12:30 PM"
-          - "01:00 PM"
-          - "01:30 PM"
-          - "02:00 PM"
-          - "02:30 PM"
-          - "03:00 PM"
-          - "03:30 PM"
-          - "04:00 PM"
-          - "04:30 PM"
-          - "05:00 PM"
-          - "05:30 PM"
-          - "06:00 PM"
-          - "06:30 PM"
-          - "07:00 PM"
-          - "07:30 PM"
-          - "08:00 PM"
-          - "08:30 PM"
-          - "09:00 PM"
-          - "09:30 PM"
-          - "10:00 PM"
-          - "10:30 PM"
-          - "11:00 PM"
-          - "11:30 PM"
 
 jobs:
   set-matrix:
@@ -109,63 +50,6 @@ jobs:
             MATRIX='{"include":[{"environment":"UAT","browser":"Chrome"},{"environment":"UAT","browser":"Firefox"}]}'
           fi
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
-
-  update-schedule:
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.update_schedule == 'true'
-    runs-on: ubuntu-latest
-    env:
-      SCHEDULE_TIME: ${{ github.event.inputs.schedule_time }}
-    steps:
-      - name: Validate time and compute UTC cron
-        id: cron
-        run: |
-          TIME=$(echo "$SCHEDULE_TIME" | xargs)
-
-          if [[ "$TIME" =~ ^([0-9]{1,2}):([0-5][0-9])[[:space:]]*([AaPp][Mm])$ ]]; then
-            HH=$((10#${BASH_REMATCH[1]}))
-            MM=$((10#${BASH_REMATCH[2]}))
-            AMPM=$(echo "${BASH_REMATCH[3]}" | tr '[:lower:]' '[:upper:]')
-            if [ "$HH" -lt 1 ] || [ "$HH" -gt 12 ]; then
-              echo "::error::Hour must be 1-12 when using AM/PM. Got: '$SCHEDULE_TIME'"
-              exit 1
-            fi
-            if [ "$AMPM" = "AM" ]; then
-              if [ "$HH" -eq 12 ]; then HH=0; fi
-            else
-              if [ "$HH" -ne 12 ]; then HH=$((HH + 12)); fi
-            fi
-          elif [[ "$TIME" =~ ^([01]?[0-9]|2[0-3]):([0-5][0-9])$ ]]; then
-            HH=$((10#${BASH_REMATCH[1]}))
-            MM=$((10#${BASH_REMATCH[2]}))
-          else
-            echo "::error::schedule_time must be HH:MM 24h (e.g. 03:00) or H:MM AM/PM (e.g. 3:00 AM). Got: '$SCHEDULE_TIME'"
-            exit 1
-          fi
-
-          IST_MIN=$((HH * 60 + MM))
-          UTC_MIN=$(( (IST_MIN - 330 + 1440) % 1440 ))
-          UTC_HH=$((UTC_MIN / 60))
-          UTC_MM=$((UTC_MIN % 60))
-          CRON=$(printf '%d %d * * *' "$UTC_MM" "$UTC_HH")
-          UTC_TIME=$(printf '%02d:%02d' "$UTC_HH" "$UTC_MM")
-
-          DISPLAY_AMPM="AM"; [ "$HH" -ge 12 ] && DISPLAY_AMPM="PM"
-          DISPLAY_H12=$((HH % 12)); [ "$DISPLAY_H12" -eq 0 ] && DISPLAY_H12=12
-          DISPLAY_IST=$(printf '%d:%02d %s' "$DISPLAY_H12" "$MM" "$DISPLAY_AMPM")
-
-          if [ "$IST_MIN" -lt 330 ]; then DAY_NOTE=" (previous calendar day)"; else DAY_NOTE=""; fi
-          {
-            echo "## 🕒 New nightly schedule: ${DISPLAY_IST} IST"
-            echo ""
-            echo "GitHub's default token can't push changes to workflow files, so this can't be applied automatically."
-            echo "Edit \`.github/workflows/tripstacc-web-idfc.yml\` on \`main\` yourself:"
-            echo ""
-            echo '```yaml'
-            echo "  schedule:"
-            echo "    # ${DISPLAY_IST} IST = ${UTC_TIME} UTC${DAY_NOTE}"
-            echo "    - cron: \"${CRON}\""
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
 
   test:
     needs: set-matrix
