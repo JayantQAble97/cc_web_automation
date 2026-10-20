@@ -3,13 +3,13 @@
 run-name: "ShopStacc BOBCard ${{ github.event.inputs.device || 'UAT (Matrix)' }}${{ github.event.inputs.environment && format(' {0}', github.event.inputs.environment) || '' }}${{ github.event.inputs.feature && format(' @{0}', github.event.inputs.feature) || '' }}"
 
 # Triggers:
-#   1. schedule → daily at 1:00 AM IST, runs a matrix: UAT/GalaxyS21 + UAT/iPhone13
+#   1. schedule → currently disabled (see commented-out block below) — re-enable by uncommenting
 #   2. workflow_dispatch → manual run with one specific environment / device / feature
 
 on:
-  schedule:
-    # 1:00 AM IST = 19:30 UTC (previous calendar day)
-    - cron: "30 19 * * *"
+  # schedule:
+  #   # 1:00 AM IST = 19:30 UTC (previous calendar day)
+  #   - cron: "30 19 * * *"
 
   workflow_dispatch:
     inputs:

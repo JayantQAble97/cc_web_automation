@@ -3,13 +3,13 @@ name: TripStacc Mobile BOB flow
 run-name: "TripStacc BOB ${{ github.event.inputs.mobile && (github.event.inputs.mobile == 'iphone13' && 'iPhone13' || 'GalaxyS21') || 'UAT (Matrix)' }} ${{ github.event.inputs.environment || '' }}${{ github.event.inputs.feature && format(' @{0}', github.event.inputs.feature) || '' }}"
 
 # Triggers:
-#   1. schedule → daily at 1:30 AM IST, runs a matrix: UAT/GalaxyS21 + UAT/iPhone13
+#   1. schedule → currently disabled (see commented-out block below) — re-enable by uncommenting
 #   2. workflow_dispatch → manual run with one specific environment / device / feature
 
 on:
-  schedule:
-    # 1:30 AM IST = 20:00 UTC (previous calendar day)
-    - cron: "0 20 * * *"
+  # schedule:
+  #   # 1:30 AM IST = 20:00 UTC (previous calendar day)
+  #   - cron: "0 20 * * *"
 
   workflow_dispatch:
     inputs:
