@@ -1234,7 +1234,7 @@ test('TC-37975 Verify fare/service options are available and selectable per leg 
   });
 });
 
-test.only('TC-37973 Verify selecting a Return flight for round trip', { tag: ['@idfc', '@bob', '@common', '@homepageflight', '@sanity', '@regression'] }, async () => {
+test('TC-37973 Verify selecting a Return flight for round trip', { tag: ['@idfc', '@bob', '@common', '@homepageflight', '@sanity', '@regression'] }, async () => {
   await test.step('Step 1: Enter City From Airport', async () => {
     await page.waitForTimeout(5000);
 
@@ -1519,7 +1519,6 @@ test('TC-37965 Verify flight result cards are displayed', { tag: ['@idfc', '@bob
     await FlightHomePage.verifyFlightResultCardsList(page);
   });
 });
-
 
 
 

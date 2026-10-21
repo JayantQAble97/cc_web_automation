@@ -3,13 +3,13 @@ name: TripStacc Mobile IDFC flow
 run-name: "TripStacc IDFC ${{ github.event.inputs.mobile && (github.event.inputs.mobile == 'iphone13' && 'iPhone13' || 'GalaxyS21') || 'UAT (Matrix)' }} ${{ github.event.inputs.environment || '' }}${{ github.event.inputs.feature && format(' @{0}', github.event.inputs.feature) || '' }}"
 
 # Triggers:
-#   1. schedule → daily at 2:00 AM IST, runs a matrix: UAT/GalaxyS21 + UAT/iPhone13
+#   1. schedule → currently disabled (see commented-out block below) — re-enable by uncommenting
 #   2. workflow_dispatch → manual run with one specific environment / device / feature
 
 on:
-  schedule:
-    # 2:00 AM IST = 20:30 UTC (previous calendar day)
-    - cron: "30 20 * * *"
+  # schedule:
+  #   # 2:00 AM IST = 20:30 UTC (previous calendar day)
+  #   - cron: "30 20 * * *"
 
   workflow_dispatch:
     inputs:
@@ -224,11 +224,11 @@ jobs:
         with:
           server_address: smtp.office365.com
           server_port: 587
-          username: ankitpatel@qable.io
-          password: zjwtgkflbwczqrpb
+          username: jignesh.shah@customer-capital.com
+          password: ${{ secrets.SMTP_PASSWORD }}
           subject: "[${{ steps.stats.outputs.status }}] TripStacc IDFC ${{ env.DEVICE }} ${{ env.ENVIRONMENT }}${{ env.FEATURE_TAG && format(' @{0}', env.FEATURE_TAG) || '' }} — Playwright Report"
-          to: dharm.vrat@customer-capital.com, urvashi.saraswat@customer-capital.com, nikunj.trivedi@qable.io, aneri.patel@qable.io, 1ee687f3.linearloop.io@in.teams.ms
-          from: ankitpatel@qable.io
+          to: dharm.vrat@customer-capital.com
+          from: jignesh.shah@customer-capital.com
           html_body: |
             <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
               <h2 style="background:${{ steps.stats.outputs.status == 'FAILED' && '#cc0000' || '#00b300' }};color:#fff;padding:12px 16px;border-radius:4px;margin:0">

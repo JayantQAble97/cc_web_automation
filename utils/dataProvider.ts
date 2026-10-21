@@ -1,41 +1,8 @@
-const PROJECT = process.env.PROJECT || "";
-const PRODUCT = PROJECT.split("-")[0]?.toLowerCase() || "tripstacc";
-const ENVIRONMENT =
-  process.env.ENV?.toUpperCase() ||
-  PROJECT.split("-")[2]?.toUpperCase() ||
-  "QA";
-
 // Map lowercase product name to actual camelCase filename
 const PATH_MAP: Record<string, string> = {
   tripstacc: "../TripStacc/testData/tripStacc.json",
   shopstacc: "../ShopStacc/testData/shopStacc.json",
 };
-
-let testData: any;
-
-try {
-  const dataPath = PATH_MAP[PRODUCT];
-  if (!dataPath) throw new Error();
-  testData = require(dataPath);
-} catch {
-  throw new Error(`❌ JSON not found for product: ${PRODUCT}`);
-}
-
-// ✅ Normalize client name (case-insensitive match)
-const RAW_CLIENT = process.env.CLIENT || "BOB";
-
-// ✅ Find matching key dynamically (important for future clients)
-const CLIENT_KEY = Object.keys(testData).find(
-  (key) => key.toLowerCase() === RAW_CLIENT.toLowerCase(),
-);
-
-if (!CLIENT_KEY || CLIENT_KEY === "common") {
-  throw new Error(
-    `❌ Invalid CLIENT: "${RAW_CLIENT}". Available: ${Object.keys(testData)
-      .filter((k) => k !== "common")
-      .join(", ")}`,
-  );
-}
 
 // ✅ Deep merge utility
 function deepMerge(target: any, source: any): any {
@@ -69,12 +36,74 @@ function stripEnvironmentSections(data: any): any {
   return cleanData;
 }
 
-const commonBase = stripEnvironmentSections(testData.common || {});
-const commonEnv = testData.common?.[ENVIRONMENT] || {};
-const clientBase = stripEnvironmentSections(testData[CLIENT_KEY] || {});
-const clientEnv = testData[CLIENT_KEY]?.[ENVIRONMENT] || {};
+// ✅ Resolve merged test data for a product/client/environment.
+//
+// Each argument falls back to the same env-var-derived defaults the module
+// used to compute once at import time (PROJECT/CLIENT/ENV) — so existing
+// call sites that just want `Data` (no args) behave exactly as before.
+//
+// A call site can instead pass explicit (product, client) overrides to get
+// the right JSON regardless of what PROJECT/CLIENT happen to be set to in
+// the current process — needed because Playwright projects running in the
+// same worker process share one `process.env`, so two products/clients
+// can't both rely on a single global PROJECT/CLIENT (e.g. when the VS Code
+// Playwright extension runs TripStacc and ShopStacc tests together).
+export function getData(
+  productOverride?: string,
+  clientOverride?: string,
+  environmentOverride?: string,
+): any {
+  const PROJECT = process.env.PROJECT || "";
+  const product = (
+    productOverride ||
+    PROJECT.split("-")[0] ||
+    "tripstacc"
+  ).toLowerCase();
 
-export const Data = deepMerge(
-  deepMerge(commonBase, commonEnv),
-  deepMerge(clientBase, clientEnv),
-);
+  const environment = (
+    environmentOverride ||
+    process.env.ENV?.toUpperCase() ||
+    PROJECT.split("-")[2]?.toUpperCase() ||
+    "QA"
+  );
+
+  const rawClient = clientOverride || process.env.CLIENT || "BOB";
+
+  const dataPath = PATH_MAP[product];
+  let testData: any;
+  try {
+    if (!dataPath) throw new Error();
+    testData = require(dataPath);
+  } catch {
+    throw new Error(`❌ JSON not found for product: ${product}`);
+  }
+
+  // ✅ Find matching key dynamically (important for future clients)
+  const clientKey = Object.keys(testData).find(
+    (key) => key.toLowerCase() === rawClient.toLowerCase(),
+  );
+
+  if (!clientKey || clientKey === "common") {
+    throw new Error(
+      `❌ Invalid CLIENT: "${rawClient}" for product "${product}". Available: ${Object.keys(
+        testData,
+      )
+        .filter((k) => k !== "common")
+        .join(", ")}`,
+    );
+  }
+
+  const commonBase = stripEnvironmentSections(testData.common || {});
+  const commonEnv = testData.common?.[environment] || {};
+  const clientBase = stripEnvironmentSections(testData[clientKey] || {});
+  const clientEnv = testData[clientKey]?.[environment] || {};
+
+  return deepMerge(
+    deepMerge(commonBase, commonEnv),
+    deepMerge(clientBase, clientEnv),
+  );
+}
+
+// ✅ Default export — same PROJECT/CLIENT/ENV-derived data as before,
+// computed once at import time. Existing call sites keep working unchanged.
+export const Data = getData();

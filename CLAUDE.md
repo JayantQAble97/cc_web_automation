@@ -8,7 +8,7 @@ Playwright + TypeScript UI test automation (Page Object Model) for two loyalty p
 - **TripStacc** (travel) — clients `BOB`, `IDFC` — `TripStacc/`
 - **ShopStacc** (e-commerce) — client `BOBCARD` (+ an incomplete HDFC suite) — `ShopStacc/`
 
-`SSV2/` is a separate suite with its own `SSV2/playwright.config.ts` (the `test:ssv2:*` scripts). Treat it as out of scope unless explicitly asked.
+`SSV2/` is a separate suite with its own `SSV2/playwright.config.ts` (the `test:ssv2:*` scripts, client `HDFC`). It is currently untracked in git, and the `SSV2*.zip` files in the root are snapshots of it. Treat it as out of scope unless explicitly asked.
 
 ## Commands
 
@@ -46,7 +46,9 @@ There is no lint step, and `typescript` is not a dependency — Playwright trans
 5. **`utils/deviceHelper.ts`** — `DeviceHelper.isMobile()` decides mobile vs desktop by string-matching `PROJECT`, not the viewport.
 6. **LambdaTest grid**: `IS_GRID=true` (or `GRID_PROFILE=<name>` from `cc.config.yaml` `grid.profiles`) makes the config set `connectOptions.wsEndpoint` (`utils/lambdaGrid.ts`). Real devices (`LAMBDA_REAL_DEVICE=true`) instead go through a `browser`-fixture shim in `utils/testBase.ts` using `_android.connect()`. Note `testBase.ts` reads only the raw env vars, not grid profiles. Credentials: `LAMBDA_USER`/`LAMBDA_KEY` in `.env`.
 
-Global settings: 600 s test timeout, 1 retry, workers 2 locally / 1 when `CI` is set; reporters list + JSON (`reports/test-results.json`) + HTML (`playwright-report/`).
+Global settings (`playwright.config.ts`): 300 s test timeout, **no retries in config** (`retries` is commented out — CI passes `--retries=1`), workers 2 locally / 1 when `CI` is set, `fullyParallel`; screenshot, video and trace are always `on`. Runs are headless unless `HEADED=true`, which also switches desktop to a maximized window (`viewport: null`) instead of 1920×1080. `.env` is loaded via `dotenv`. Reporters: list + JSON (`reports/test-results.json`) + HTML (`playwright-report/`).
+
+The top-level `tests/example.spec.ts`, `config/` and `specs/` hold only stubs/READMEs; real tests live under `TripStacc/tests` and `ShopStacc/tests`.
 
 ## Code structure and conventions
 
@@ -71,4 +73,4 @@ Layering: **tests → pages → (`utils` helpers + locators + `Data`)**. `RULES.
 - `ShopStacc/tests/HomePageGuest.test.ts` calls a nonexistent `HomePage.verifyGuestHomepage`.
 - Two `package.json` "scripts" are description strings, not commands.
 - README/USER_GUIDE/RULES describe older layouts (`config/ts.config.ts`, ~12 workflows, 4 CI workers) — trust the code over the docs.
-- SMTP credentials are hardcoded in `utils/send-report-email.js` and every workflow YAML.
+- Report emails are sent as `jignesh.shah@customer-capital.com` via smtp.office365.com; the password comes from the `SMTP_PASSWORD` GitHub secret (workflows) or `SMTP_PASSWORD` in `.env` (`utils/send-report-email.js`). Recipients are still hardcoded in each workflow YAML and the JS file.

@@ -2,6 +2,12 @@ name: TripStacc Web IDFC flow
 
 run-name: "TripStacc IDFC ${{ github.event.inputs.environment || 'UAT (Matrix)' }}${{ github.event.inputs.browser && format(' [{0}]', github.event.inputs.browser) || '' }}${{ github.event.inputs.feature && format(' @{0}', github.event.inputs.feature) || '' }}"
 
+# Cancels any older queued/in-progress run of this workflow on the same ref when a new one starts,
+# so re-triggering doesn't pile up stuck queued runs behind each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 # Triggers:
 #   1. schedule → daily at 3:00 AM IST, runs a matrix: UAT/Chrome + UAT/Firefox
 #   2. workflow_dispatch → manual run with one specific environment / browser / feature
@@ -26,7 +32,7 @@ on:
         options: [Chrome, Firefox, WebKit]
         default: Chrome
       feature:
-        description: "Feature tag without @ (e.g. Login, Smoke, Sanity)"
+        description: "Feature tag without @ (e.g. loginpage, Smoke, Sanity)"
         required: false
         default: ""
 
@@ -62,6 +68,7 @@ jobs:
       ENVIRONMENT: ${{ matrix.environment }}
       BROWSER: ${{ matrix.browser }}
       FEATURE_TAG: ${{ github.event.inputs.feature || '' }}
+      EMAIL_TO: ${{ github.event_name == 'workflow_dispatch' && 'jignesh.shah@customer-capital.com' || 'dharm.vrat@customer-capital.com' }}
 
     steps:
       - name: Checkout repository
@@ -96,6 +103,7 @@ jobs:
           esac
           PROJECT_VAL="tripstacc-${BP}-${ENVIRONMENT}${FEATURE_TAG:+-${FEATURE_TAG}}"
           echo "PROJECT=$PROJECT_VAL"
+
           set +e
           CLIENT="$CLIENT" PROJECT="$PROJECT_VAL" npx playwright test TripStacc/tests \
             --config=playwright.config.ts --workers=1 --retries=1
@@ -205,7 +213,7 @@ jobs:
           fi
 
       - name: Deploy report to GitHub Pages
-        if: always()
+        if: always() && github.event_name == 'schedule'
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
@@ -219,12 +227,17 @@ jobs:
         if: always()
         id: report-url
         run: |
-          REPO="${{ github.repository }}"
-          ORG=$(echo "$REPO" | cut -d'/' -f1)
-          REPO_NAME=$(echo "$REPO" | cut -d'/' -f2)
-          URL="https://${ORG}.github.io/${REPO_NAME}/tripstacc/IDFC-${{ env.ENVIRONMENT }}-${{ env.BROWSER }}/${{ github.run_id }}/"
-          echo "url=$URL" >> "$GITHUB_OUTPUT"
-          echo "### 📊 [View Playwright Report]($URL)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ github.event_name }}" = "schedule" ]; then
+            REPO="${{ github.repository }}"
+            ORG=$(echo "$REPO" | cut -d'/' -f1)
+            REPO_NAME=$(echo "$REPO" | cut -d'/' -f2)
+            URL="https://${ORG}.github.io/${REPO_NAME}/tripstacc/IDFC-${{ env.ENVIRONMENT }}-${{ env.BROWSER }}/${{ github.run_id }}/"
+            echo "url=$URL" >> "$GITHUB_OUTPUT"
+            echo "### 📊 [View Playwright Report]($URL)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "url=" >> "$GITHUB_OUTPUT"
+            echo "### 📊 Report not published to GitHub Pages for manual runs (only the nightly scheduled run publishes, to avoid extra GitHub Pages build triggers). Download the HTML report artifact above instead." >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Send email report
         if: always()
@@ -233,11 +246,11 @@ jobs:
         with:
           server_address: smtp.office365.com
           server_port: 587
-          username: ankitpatel@qable.io
-          password: zjwtgkflbwczqrpb
+          username: jignesh.shah@customer-capital.com
+          password: ${{ secrets.SMTP_PASSWORD }}
           subject: "[${{ steps.stats.outputs.status }}] TripStacc IDFC ${{ env.ENVIRONMENT }} [${{ env.BROWSER }}/Web]${{ env.FEATURE_TAG && format(' @{0}', env.FEATURE_TAG) || '' }} — Playwright Report"
-          to: dharm.vrat@customer-capital.com, urvashi.saraswat@customer-capital.com, nikunj.trivedi@qable.io, aneri.patel@qable.io, 1ee687f3.linearloop.io@in.teams.ms
-          from: ankitpatel@qable.io
+          to: ${{ env.EMAIL_TO }}
+          from: jignesh.shah@customer-capital.com
           html_body: |
             <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
               <h2 style="background:${{ steps.stats.outputs.status == 'FAILED' && '#cc0000' || '#00b300' }};color:#fff;padding:12px 16px;border-radius:4px;margin:0">
@@ -256,8 +269,7 @@ jobs:
                 <tr><td style="font-weight:bold">Triggered by</td><td>${{ github.actor }}</td></tr>
               </table>
               <p style="margin-top:16px">
-                <a href="${{ steps.report-url.outputs.url }}" style="background:#0066cc;color:#fff;padding:10px 18px;border-radius:4px;text-decoration:none;font-weight:bold">📊 View Playwright Report</a>
-                &nbsp;
+                ${{ steps.report-url.outputs.url != '' && format('<a href="{0}" style="background:#0066cc;color:#fff;padding:10px 18px;border-radius:4px;text-decoration:none;font-weight:bold">📊 View Playwright Report</a>&nbsp;', steps.report-url.outputs.url) || '' }}
                 <a href="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" style="background:#555;color:#fff;padding:10px 18px;border-radius:4px;text-decoration:none;font-weight:bold">🔗 View Run</a>
               </p>
             </div>

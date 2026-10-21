@@ -47,6 +47,16 @@ export const FlightPageLocators = {
   phoneCopyButton: `//div[@class="calldatabox"]//span[@class="phone_copy"]`,
   emailCopyButton: `//div[@class="calldatabox"]//span[@class="email_copy"]`,
   firstFlightCard: `(//div[contains(@class,'flight') and contains(@class,'Card')])[1]`,
+  // One element per flight/fare on the results page, e.g. <div data-key="1143" data-ai_code="IX1347" class="flightInfoCard">
+  flightResultCards: `//div[contains(@class,'flightInfoCard')]`,
+  // IDFC round trip results: onward/return tabs, one result column per leg (1 = onward, 2 = return)
+  roundTripTab: (segment: 'onward' | 'return') => `//li[contains(@class,"domestic_round_segment") and @data-segment="${segment}"]`,
+  roundTripResultColumn: (leg: number) => `//div[@id="t-w-i-${leg}"]`,
+  roundTripResultRows: (leg: number) => `//div[@id="t-w-i-${leg}"]//div[contains(@class,"rowresult")]`,
+  // Selected/highlighted row gets "user_clicked active"
+  roundTripSelectedRow: (leg: number) => `//div[@id="t-w-i-${leg}"]//div[contains(@class,"rowresult") and contains(@class,"user_clicked") and contains(concat(" ",normalize-space(@class)," ")," active ")]`,
+  // Exact class match: fare modals also contain h4.modal_total_price_footer
+  roundTripFooterTotal: `//h4[contains(concat(" ",normalize-space(@class)," ")," total_price_footer ")]`,
   FligthStopDetails: `(//div[contains(@class,"stoDet stop")])[1]`,
   FlightRefundableText: `(//span[@class="_refundable"])[1] | (//div[text()="Refundable"])[1]`,
   FlightNonRefundableText: `(//span[@class="_nonrefundable"])[1]`,
@@ -61,6 +71,15 @@ export const FlightPageLocators = {
   filterTabLayoverAirports: `(//a[text()="Layover Airports "])[1]`,
   filterApplyButton: `(//button[text()="Apply"])[1]`,
   filterClearButton: `(//button[text()="Clear All"])[1]`,
+  sortTabButton: `//a[@href="#Sort"]`,
+  sortPriceLowToHigh: `//div[@data-sort="price_l2h_filter"]`,
+  sortPriceHighToLow: `//div[@data-sort="price_h2l_filter"]`,
+  sortDurationShortest: `//div[@data-sort="duration_l2h_filter"]`,
+  sortDurationLongest: `//div[@data-sort="duration_h2l_filter"]`,
+  sortDepartureEarliest: `//div[@data-sort="dep_l2h_filter"]`,
+  sortDepartureLatest: `//div[@data-sort="dep_h2l_filter"]`,
+  sortArrivalEarliest: `//div[@data-sort="arr_l2h_filter"]`,
+  sortArrivalLatest: `//div[@data-sort="arr_h2l_filter"]`,
   filterNonStop: `(//div[@class="filterboxcontent"]//label[text()="Non-stop"])[1] | (//div[@class="stopbig"])[1]`,
   filter1Stop: `(//div[@class="filterboxcontent"]//label[text()="1 Stop"])[1] | (//div[@class="stopbig"])[2]`,
   filter1PlusStop: `(//div[@class="filterboxcontent"]//label[text()="1+ Stops"])[1]`,
@@ -93,10 +112,17 @@ export const FlightPageLocators = {
   airlinenameOnFlightDetailsPage: `(//div[@class='a-n airlinename'])[1]`,
   bookNowButtonOnFlightDetailsPage: `(//div[@id="flight_search_result"]//button[text()="Book Now"])[2]`,
   bookButtonOnFairDetailsPage: `//button[contains(@class,"price_strip_footer") and contains(@class,"footer_return_btn")] |(//div[@class="flightInforMain"]//a[contains(text(),"Book Now")])[1]`,
-  // IDFC fare-selection modal; its footer is repeated per trip panel and only one Continue is visible at a time
   fareModal: `//div[@id="elkanio_price"]`,
   fareModalContinueButton: `//div[@id="elkanio_price"]//div[contains(@class,"flbuttonbox")]//button >> visible=true >> nth=0`,
+  fareOptionCards: `//div[@id="elkanio_price"]//div[contains(@class,"servicePriceBox")]`,
+  fareOptionCardSelected: `//div[@id="elkanio_price"]//div[contains(@class,"servicePriceBox") and contains(@class,"active")]`,
+  fareModalReturnTab: `//span[@id="return_multi_popup"]`,
+  fareModalFooterTotalPrice: `//h4[contains(@class,"modal_total_price_footer")] >> visible=true >> nth=0`,
   continueButtonOnFlightDetailsPage:`//button[@id="move_to_pax_details_section"] | //button[@class="bookcont contin_servc_btn"]`,
+  nearbyAirportPopup: `//div[@id="nearbypopup"]`,
+  nearbyAirportConfirmButton: `//button[@id="nearby_popup_confirm"]`,
+  priceChangePopupHeading: `//h4[text()="Price change"]`,
+  priceChangeConfirmButton: `//button[text()="Confirm"] >> visible=true >> nth=0`,
   addnewTravellerButton: `(//button[@class="add_new_btn"])[1]`,
   travellerGenderMR: `//label[text()="Mr."]`,
   FirstNameErrorMessage: `//p[text()="Please enter a valid first name"] | //i[contains(text(),"Please enter a valid first & middle name")]`,
@@ -106,6 +132,8 @@ export const FlightPageLocators = {
   FirstTravellerNameOnSummary: `(//div[@class="flduserbox"])[2] | (//td[@class="seat_pax_name"])[1]`,
   addTravellerButton: `//span[text()="Add Traveller"]`,
   FirstTravellerNameEditButton: `(//button[@class="fld_travel_edit"])[2]`,
+  // The self/only traveller's edit button, for flows that never add a second traveller (unlike index [2] above)
+  SelfTravellerEditButton: `(//button[@class="fld_travel_edit"])[1]`,
   FirstOptionCheckbox: `//div[@class="inputcheckbox"]//label[@for="pax401"]`,
   firstTravellerNameEditConfirmButton: `//span[text()="Confirm"]`,
   travellerEmail: `//h5[text()="Email"]`,
@@ -140,7 +168,6 @@ export const FlightPageLocators = {
  bookingId: `//span[@id='copy_ref'] | (//td[@class='bookng_id']//span)[2]`,
 
 bookingDate: `//div[@class='travell_info']//p | (//td[@class='bookng_date bookng_date_flt dt_orde'])[1]`,
-
   flightDropdown: `//div[@class='cnf_flt_top']`,
   flightName: `(//div[@class='fltcod'])[1]`,
   departureCity: `(//p[@class='flt_cityname'])[1]`,
@@ -162,6 +189,9 @@ bookingDate: `//div[@class='travell_info']//p | (//td[@class='bookng_date bookng
 baggageSelectionOption: "//li[@class='baggage_li'] | //a[@class='btn btn-sm btn-default baggage_tab']",
   seatMapContainer: '(//div[@class="seatselaction_innerbox"])[1]',
   availableSeat: '(//div[@class="columninnebox extrapayhigh"])[1] | (//div[@class=" choose_seat  seat_popup"])[1]',
+  // First available (data-availability="1") Column A seat — availableSeat above only matches extra-pay
+  // seats (class "extrapayhigh"); free seats are class "freebox" and identified by data-seat_number
+  availableSeatColumnA: `(//div[contains(@class,"rowcolumn") and @data-availability="1" and contains(@data-seat_number,"A")])[1]//div[contains(@class,"columninnebox")]`,
   UnavailableSeat: '(//div[@class="columninnebox Unavailable"])[1]',
   unvailableSeatErrorMessage: `(//p[text()="Sorry! This seat is taken"])[1]`,
   seatPrice: `(//h4[contains(@class,'fl_det_footer') and contains(text(),'₹')])[3] | //span[@class='grandtotal_after_red grandtotal_after_red_ga']`,

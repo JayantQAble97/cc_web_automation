@@ -1,6 +1,3 @@
-// Single source of truth for product/client/environment -> baseUrl + testDir,
-// read from cc.config.yaml (project root). Add a new client or environment
-// there — no code changes needed in playwright.config.ts.
 
 import * as fs from 'fs';
 import * as path from 'path';
