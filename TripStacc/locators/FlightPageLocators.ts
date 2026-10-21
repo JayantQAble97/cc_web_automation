@@ -124,6 +124,8 @@ export const FlightPageLocators = {
   priceChangePopupHeading: `//h4[text()="Price change"]`,
   priceChangeConfirmButton: `//button[text()="Confirm"] >> visible=true >> nth=0`,
   addnewTravellerButton: `(//button[@class="add_new_btn"])[1]`,
+  // Toast shown after Add Traveller succeeds: <div id="traveller_save_success">...<div class="toaster_message"><p>Saved successfully!</p>
+  travellerSavedSuccessToast: `//div[@id="traveller_save_success"]//div[contains(@class,"toaster_message")]`,
   travellerGenderMR: `//label[text()="Mr."]`,
   FirstNameErrorMessage: `//p[text()="Please enter a valid first name"] | //i[contains(text(),"Please enter a valid first & middle name")]`,
   LastNameErrorMessage: `//p[text()="Please enter a valid last name"] | //i[contains(text(),"Please enter a valid last name")]`,
@@ -134,6 +136,8 @@ export const FlightPageLocators = {
   FirstTravellerNameEditButton: `(//button[@class="fld_travel_edit"])[2]`,
   // The self/only traveller's edit button, for flows that never add a second traveller (unlike index [2] above)
   SelfTravellerEditButton: `(//button[@class="fld_travel_edit"])[1]`,
+  // "Delete" button on the Edit traveller page (next to "Confirm")
+  deleteTravellerButton: `//button[normalize-space()="Delete"]`,
   FirstOptionCheckbox: `//div[@class="inputcheckbox"]//label[@for="pax401"]`,
   firstTravellerNameEditConfirmButton: `//span[text()="Confirm"]`,
   travellerEmail: `//h5[text()="Email"]`,
