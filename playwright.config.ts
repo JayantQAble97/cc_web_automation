@@ -6,7 +6,7 @@ const mobileDevices = require('./mobileDevices');
 
 // ─── SETTINGS ────────────────────────────────────────────────────────────────
 const TIMEOUT = 300000;
-//const RETRIES = 1;             // retries on failure
+const RETRIES = 1;             // retries on failure
 const WORKERS = { ci: 1, local: 2 };
 const HEADED  = process.env.HEADED === 'true';
 // ─────────────────────────────────────────────────────────────────────────────

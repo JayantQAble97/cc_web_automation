@@ -19,7 +19,7 @@ test.afterEach(async () => {
   await context.close();
 });
 
-test('SC_015: Hotel Search', { tag: ['@idfc', '@bob', '@common', '@homepagehotel', '@smoke', '@sanity'] }, async () => {
+test('SC_015: Hotel Search', { tag: ['@idfc', '@bob', '@common', '@homepagehotel', '@smoke'] }, async () => {
   await test.step('Step 1: Open Hotels Section', async () => {
     await HotelHomePage.verifyHotelTabBtnDisplayed(page);
     await page.waitForTimeout(500);
