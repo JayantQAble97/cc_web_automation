@@ -18,7 +18,6 @@ test.afterEach(async () => {
 });
 
 test('TS_HP_001: Validate promotional offers / rewards banners are displayed', { tag: ['@idfc', '@bob', '@common', '@homepage', '@smoke', '@sanity'] }, async () => {
- 
   const heroBannerApplicable = HomePage.heroBannerAndOffersApplicable();
   let flightTabOffers: string[] = [];
 

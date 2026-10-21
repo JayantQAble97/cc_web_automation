@@ -66,7 +66,7 @@ test('SC_001: Verify user can Login with mobile number and OTP', { tag: ['@commo
   });
 });
 
-test('SC_002: Home page with multiple card and without multiple cards selection', { tag: ['@bob', '@loginpage','@smoke', '@sanity'] }, async ({ }) => {
+test('SC_002: Home page with multiple card and without multiple cards selection', { tag: ['@bob', '@loginpage','@smoke'] }, async ({ }) => {
 const CLIENT = process.env.CLIENT?.toUpperCase();
 test.skip(CLIENT === 'IDFC', 'Skipping this test for IDFC');
 

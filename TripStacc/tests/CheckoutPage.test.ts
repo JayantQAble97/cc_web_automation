@@ -23,7 +23,7 @@ test.afterEach(async () => {
   await context.close();
 });
 
-test('SC_010: Flight - Checkout with and without Promo Codes', { tag: ['@idfc', '@bob', '@baggage', '@common', '@flaky', '@checkout', '@regression'] }, async () => {
+test('SC_010: Flight - Checkout with and without Promo Codes', { tag: ['@idfc', '@bob', '@baggage', '@common', '@flaky', '@checkout', '@regression', '@Sanity'] }, async () => {
   await test.step("Step 1: Enter City From Airport", async () => {
     await page.waitForTimeout(5000);
     await FlightHomePage.clickOnCityFromAirport(page);
@@ -146,7 +146,6 @@ test('SC_010: Flight - Checkout with and without Promo Codes', { tag: ['@idfc', 
     await PaymentPage.verifyErrorMessageVisible(page);
   });
 });
-
 
 
 

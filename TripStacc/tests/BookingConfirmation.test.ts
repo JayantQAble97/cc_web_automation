@@ -23,7 +23,7 @@ test.afterEach(async () => {
   await context.close();
 });
 
-test('SC_012: Booking Confirmation Page: Flight (Confirmed/Pending/Failed)', { tag: ['@idfc', '@bob', '@common', '@flight', '@testmode', '@bookingconfirmation', '@regression', "@earn"] }, async () => {
+test.only('SC_012: Booking Confirmation Page: Flight (Confirmed/Pending/Failed)', { tag: ['@idfc', '@bob', '@common', '@flight', '@testmode', '@bookingconfirmation', '@regression', "@earn"] }, async () => {
   await test.step("Step 1: Enter City From Airport", async () => {
     await page.waitForTimeout(5000);
     await FlightHomePage.clickOnCityFromAirport(page);
