@@ -62,7 +62,7 @@ jobs:
       CLIENT: IDFC
       ENVIRONMENT: ${{ matrix.environment }}
       DEVICE: ${{ matrix.device }}
-      FEATURE_TAG: ${{ github.event.inputs.feature || '' }}
+      FEATURE_TAG: ${{ github.event.inputs.feature || (github.event_name == 'schedule' && 'sanity' || '') }}
 
     steps:
       - name: Checkout repository

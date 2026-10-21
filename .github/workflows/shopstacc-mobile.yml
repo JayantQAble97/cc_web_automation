@@ -60,7 +60,7 @@ jobs:
       CI: true
       CLIENT: BOBCARD
       ENVIRONMENT: ${{ matrix.environment }}
-      FEATURE_TAG: ${{ github.event.inputs.feature || '' }}
+      FEATURE_TAG: ${{ github.event.inputs.feature || (github.event_name == 'schedule' && 'sanity' || '') }}
       DEVICE: ${{ matrix.device }}
 
     steps:

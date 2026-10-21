@@ -15,7 +15,7 @@ test.afterEach(async () => {
   await context.close();
 });
 
-test.only('SC:013: Booking Status on My Account Section', { tag: ['@idfc', '@bob', '@common', '@myaccount', '@regression','@earn'] }, async () => {
+test('SC:013: Booking Status on My Account Section', { tag: ['@idfc', '@bob', '@common', '@myaccount', '@regression','@earn'] }, async () => {
 
   await test.step('Step 1: Click My Account', async () => {
     await page.waitForTimeout(6000);
