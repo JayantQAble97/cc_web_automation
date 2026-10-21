@@ -50,8 +50,8 @@
       "enterInternationalCityTo": "Dub"
     },
     "travellername": {
-      "firstName": "John",
-      "lastName": "Doe",
+      "firstName": "Automation",
+      "lastName": "Testing",
       "WrongfirstName": "J",
       "WronglastName": "D",
       "editedFirstName": "Test",
