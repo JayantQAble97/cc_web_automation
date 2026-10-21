@@ -61,7 +61,7 @@ jobs:
       CLIENT: BOB
       ENVIRONMENT: ${{ matrix.environment }}
       BROWSER: ${{ matrix.browser }}
-      FEATURE_TAG: ${{ github.event.inputs.feature || '' }}
+      FEATURE_TAG: ${{ github.event.inputs.feature || (github.event_name == 'schedule' && 'sanity' || '') }}
 
     steps:
       - name: Checkout repository

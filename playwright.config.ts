@@ -188,6 +188,9 @@ export default defineConfig({
   timeout: TIMEOUT,
   fullyParallel: true,
   workers: process.env.CI ? WORKERS.ci : WORKERS.local,
+  // Fail the run in CI if a committed test.only() is left in place, instead
+  // of silently restricting the whole suite down to just that test.
+  forbidOnly: !!process.env.CI,
   //retries: RETRIES,
 
   reporter: [

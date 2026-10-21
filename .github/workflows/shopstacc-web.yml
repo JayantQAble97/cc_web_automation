@@ -69,7 +69,7 @@ jobs:
       ENVIRONMENT: ${{ matrix.environment }}
       BROWSER: ${{ matrix.browser }}
       VIEWPORT: ${{ matrix.viewport }}
-      FEATURE_TAG: ${{ github.event.inputs.feature || '' }}
+      FEATURE_TAG: ${{ github.event.inputs.feature || (github.event_name == 'schedule' && 'sanity' || '') }}
 
     steps:
       - name: Checkout repository

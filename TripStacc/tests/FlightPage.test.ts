@@ -95,7 +95,7 @@ test('SC_003: Search ', { tag: ['@idfc', '@bob','@common','@issue', '@homepagefl
   });
 });
 
-test('SC_003.01: Search (1 Passenger and Multiple Passengers) ', { tag: ['@idfc', '@bob', '@common', '@homepageflight', '@regression', '@Sanity'] }, async () => {
+test('SC_003.01: Search (1 Passenger and Multiple Passengers) ', { tag: ['@idfc', '@bob', '@common', '@homepageflight', '@regression', '@sanity'] }, async () => {
   let expectedTravellerCount: string;
   await test.step("Step 1: Enter City From Airport", async () => {
     await page.waitForTimeout(5000);
@@ -170,7 +170,7 @@ test('SC_003.01: Search (1 Passenger and Multiple Passengers) ', { tag: ['@idfc'
   });
 });
 
-test('SC_003.02: Search (One Way and Round Trip) ', { tag: ['@idfc', '@bob', '@common', '@flaky','@homepageflight', '@regression', '@Sanity'] }, async () => {
+test('SC_003.02: Search (One Way and Round Trip) ', { tag: ['@idfc', '@bob', '@common', '@flaky','@homepageflight', '@regression', '@sanity'] }, async () => {
   await test.step('Step 1: Enter City From Airport', async () => {
     await page.waitForTimeout(5000);
 
@@ -293,7 +293,7 @@ test('SC_003.02: Search (One Way and Round Trip) ', { tag: ['@idfc', '@bob', '@c
   });
 });
 
-test('SC_003.03: Search (with multiple classes) - Economy, Premium Economy, Business, First ', { tag: ['@idfc', '@common', '@bob', '@homepageflight', '@regression', '@Sanity'] }, async () => {
+test('SC_003.03: Search (with multiple classes) - Economy, Premium Economy, Business, First ', { tag: ['@idfc', '@common', '@bob', '@homepageflight', '@regression', '@sanity'] }, async () => {
 
   await test.step('Step 1: Enter City From Airport', async () => {
     await page.waitForTimeout(5000);
@@ -438,7 +438,7 @@ test('SC_003.03: Search (with multiple classes) - Economy, Premium Economy, Busi
   });
 });
 
-test('SC_003.04: Search (With International and Domestic) ', { tag: ['@idfc', '@bob', '@common', `@flaky`, '@homepageflight', '@regression', '@Sanity'] }, async () => {
+test('SC_003.04: Search (With International and Domestic) ', { tag: ['@idfc', '@bob', '@common', `@flaky`, '@homepageflight', '@regression', '@sanity'] }, async () => {
   await test.step("Step 1: Enter City From Airport", async () => {
     await page.waitForTimeout(5000);
     await FlightHomePage.clickOnCityFromAirport(page);
@@ -534,7 +534,7 @@ test('SC_003.04: Search (With International and Domestic) ', { tag: ['@idfc', '@
 
 });
 
-test('SC_004: Filter/Sorting and Flight Selection with Fare Type ', { tag: ['@idfc', '@bob', '@common', '@flaky', '@homepageflight', '@regression', '@Sanity'] }, async () => {
+test('SC_004: Filter/Sorting and Flight Selection with Fare Type ', { tag: ['@idfc', '@bob', '@common', '@flaky', '@homepageflight', '@regression', '@sanity'] }, async () => {
   await test.step("Step 1: Enter City From Airport", async () => {
     await page.waitForTimeout(5000);
     await FlightHomePage.clickOnCityFromAirport(page);
@@ -746,7 +746,7 @@ test('SC_004: Filter/Sorting and Flight Selection with Fare Type ', { tag: ['@id
 
 });
 
-test('SC_004.01: Update Search ', { tag: ['@idfc', '@bob', '@common','@homepageflight', '@regression', '@Sanity'] }, async () => {
+test('SC_004.01: Update Search ', { tag: ['@idfc', '@bob', '@common','@homepageflight', '@regression', '@sanity'] }, async () => {
   await test.step("Step 1: Enter City From Airport", async () => {
     await page.waitForTimeout(5000);
     await FlightHomePage.clickOnCityFromAirport(page);
@@ -791,7 +791,7 @@ test('SC_004.01: Update Search ', { tag: ['@idfc', '@bob', '@common','@homepagef
   });
 })
 
-test('SC_005: Add Traveller Details and Update Traveller Details ', { tag: ['@idfc', '@bob', '@common', '@flaky', '@homepageflight', '@regression', '@Sanity'] }, async () => {
+test('SC_005: Add Traveller Details and Update Traveller Details ', { tag: ['@idfc', '@bob', '@common', '@flaky', '@homepageflight', '@regression', '@sanity'] }, async () => {
   await test.step("Step 1: Enter City From Airport", async () => {
     await page.waitForTimeout(5000);
     await FlightHomePage.clickOnCityFromAirport(page);
