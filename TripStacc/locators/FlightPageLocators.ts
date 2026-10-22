@@ -71,6 +71,9 @@ export const FlightPageLocators = {
   filterTabLayoverAirports: `(//a[text()="Layover Airports "])[1]`,
   filterApplyButton: `(//button[text()="Apply"])[1]`,
   filterClearButton: `(//button[text()="Clear All"])[1]`,
+  // Inline "Non-stop" chip shown above the results for a given leg, with its own close (x) icon -
+  // separate from the modal-based Clear All button, and visible without opening the filter modal
+  roundTripNonStopChipClose: (segment: 'onward' | 'return') => `//span[contains(@class,"nonstop_domestic_circle_${segment}_chip")]//i[contains(@class,"fa-times")]`,
   sortTabButton: `//a[@href="#Sort"]`,
   sortPriceLowToHigh: `//div[@data-sort="price_l2h_filter"]`,
   sortPriceHighToLow: `//div[@data-sort="price_h2l_filter"]`,
