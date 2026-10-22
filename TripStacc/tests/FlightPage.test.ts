@@ -1377,6 +1377,7 @@ test('TC-37966 Verify each flight card shows key details', { tag: ['@idfc', '@bo
     await FlightHomePage.verifyFlightCardsShowKeyDetails(page);
   });
 });
+
 test('TC-37968 Verify Filter panel is available', { tag: ['@idfc', '@bob', '@common', '@homepageflight', '@sanity', '@regression'] }, async () => {
   await test.step('Step 1: Enter City From Airport', async () => {
     await page.waitForTimeout(5000);

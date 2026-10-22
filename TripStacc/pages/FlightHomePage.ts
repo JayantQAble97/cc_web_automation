@@ -361,9 +361,35 @@ static async verifyRoute(page: Page, from: string, to: string) {
     const returnColumn = page.locator(FlightPageLocators.roundTripResultColumn(2));
     await expect(returnColumn, 'Return flights should be displayed').toBeVisible({ timeout: 30000 });
 
+    // Results stream in progressively behind a loader bar (#ldr_prog) - reading the row count
+    // before it finishes can undercount genuinely available flights
+    const resultsLoader = page.locator('#ldr_prog');
+    await expect(resultsLoader, 'Flight results loader should finish before reading return flight rows').toBeHidden({ timeout: 30000 });
+
+    // A "Non-stop" filter chip can be left active on the return leg from an earlier test/session
+    // on this shared account, silently narrowing results to 1 flight - remove it via its inline
+    // close icon (the Clear All button lives in a filter modal that isn't open in this flow).
+    const returnNonStopChipClose = page.locator(FlightPageLocators.roundTripNonStopChipClose('return'));
+    if (await returnNonStopChipClose.isVisible().catch(() => false)) {
+      await returnNonStopChipClose.click();
+      await expect(resultsLoader, 'Flight results loader should finish after clearing the Non-stop filter').toBeHidden({ timeout: 30000 });
+    }
+
     // Pick a return flight that is not already selected, preferring a different price so the total visibly changes
     const previousReturn = await this.getRoundTripRowDetails(page.locator(FlightPageLocators.roundTripSelectedRow(2)).first());
     const returnRows = page.locator(FlightPageLocators.roundTripResultRows(2)).filter({ visible: true });
+    await expect(returnRows.first(), 'At least one return flight row should be visible').toBeVisible({ timeout: 30000 });
+
+    // Return rows render asynchronously after the tab switch; wait for the count to stop changing
+    // before reading it, otherwise we can read it mid-render and see only the first row
+    let previousRowCount = -1;
+    await expect(async () => {
+      const currentRowCount = await returnRows.count();
+      const stable = currentRowCount === previousRowCount && currentRowCount > 0;
+      previousRowCount = currentRowCount;
+      expect(stable, `Waiting for return flight rows to finish loading (currently ${currentRowCount})`).toBe(true);
+    }, 'Return flight rows count should stabilize after switching to the return tab').toPass({ timeout: 15000, intervals: [500, 1000, 1000, 2000] });
+
     const rowCount = await returnRows.count();
     let target: Locator | undefined;
     for (let i = 0; i < rowCount; i++) {
@@ -655,6 +681,16 @@ static async VerifyFirstFlightCardVisible(page: any) {
 
 
   static async clickOnSortTab(page: any) {
+    // The modal opened by the filter icon takes a short animation to become visible - poll for it
+    // rather than checking instantly (isVisible() doesn't wait), to avoid re-clicking a modal
+    // that is still mid-open (a second click while it's open toggles it closed again).
+    const sortTab = page.locator(FlightPageLocators.sortTabButton);
+    const openedAlready = await sortTab.waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false);
+    if (!openedAlready) {
+      // Occasionally (seen in CI) the modal flashes open and auto-closes on its own right after
+      // the icon is clicked - it is genuinely closed at this point, so re-click it once.
+      await ElementHelper.clickElement(page, FlightPageLocators.flightListFilterButton);
+    }
     await ElementHelper.clickElement(page, FlightPageLocators.sortTabButton);
   }
 
@@ -1177,7 +1213,12 @@ static async select1StopFilter(page: Page): Promise<void> {
     const cards = page.locator(FlightPageLocators.fareOptionCards).filter({ visible: true });
     const target = cards.nth(index);
     const fareName = (await target.locator('h4').innerText()).trim();
-    await target.click();
+    // Both legs' fare cards stay in the DOM at once (only visibility toggles on Continue), and the
+    // page's scroll position doesn't always settle for the newly-visible (return) section - a plain
+    // click's built-in scroll-then-verify-in-viewport check can loop forever against that. Scroll
+    // explicitly and force the click, same as ElementHelper.clickElement does elsewhere for this reason.
+    await target.scrollIntoViewIfNeeded();
+    await target.click({ force: true });
     await expect(target, `Fare option "${fareName}" should become selected after clicking it`).toHaveClass(/\bactive\b/, { timeout: 10000 });
     console.log(`Selected fare option "${fareName}"`);
   }
