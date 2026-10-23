@@ -67,7 +67,7 @@ jobs:
       CLIENT: IDFC
       ENVIRONMENT: ${{ matrix.environment }}
       BROWSER: ${{ matrix.browser }}
-      FEATURE_TAG: ${{ github.event.inputs.feature || '' }}
+      FEATURE_TAG: ${{ github.event.inputs.feature || (github.event_name == 'schedule' && 'sanity' || '') }}
       EMAIL_TO: ${{ github.event_name == 'workflow_dispatch' && 'jignesh.shah@customer-capital.com' || 'dharm.vrat@customer-capital.com' }}
 
     steps:

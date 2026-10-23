@@ -191,7 +191,7 @@ static async verifyRoute(page: Page, from: string, to: string) {
 }
 
   static async verifyFlightResultCardsList(page: Page, cardsToCheck: number = 5) {
-    // Visible only: the inactive trip tab (e.g. return leg) keeps its cards in the DOM
+   
     const cards = page.locator(FlightPageLocators.flightResultCards).filter({ visible: true });
     await expect(cards.first(), 'At least one flight result card should be displayed').toBeVisible({ timeout: 60000 });
     const count = await cards.count();
@@ -203,7 +203,6 @@ static async verifyRoute(page: Page, from: string, to: string) {
     for (let i = 0; i < Math.min(count, cardsToCheck); i++) {
       const card = cards.nth(i);
       const label = `Flight card ${i + 1}`;
-      // Flight number, e.g. "IX-1347" / "6E 123" (airline code has at least one letter, so prices don't match)
       await expect(card, `${label} should show a flight number`).toContainText(/\b(?:[A-Z]{2}|[A-Z]\d|\d[A-Z])[- ]?\d{1,5}\b/);
       await expect(card, `${label} should show a price`).toContainText(/₹\s*\d[\d,]*/);
       const times = (await card.innerText()).match(/\b\d{1,2}:\d{2}\b/g) || [];
@@ -228,7 +227,7 @@ static async verifyRoute(page: Page, from: string, to: string) {
     console.log(`All ${keys.length} flight cards are unique`);
   }
 
-  // Reads the From/To values right before a search, so later checks don't rely on cities captured by an earlier test
+  
   static async captureSelectedCitiesFromSearchForm(page: Page) {
     if (DeviceHelper.isMobile()) {
       this.selectedFromCity = '';
@@ -309,7 +308,7 @@ static async verifyRoute(page: Page, from: string, to: string) {
     }
   }
 
-  // Fare type tag on a flight card, e.g. "REFUNDABLE" badge -> "Refundable"
+  
   static getFareTypeTag(text: string): string | undefined {
     const tag = text.match(/\b(?:non[- ]?refundable|partially[- ]refundable|refundable)\b/i)?.[0];
     if (!tag) return undefined;
@@ -319,7 +318,7 @@ static async verifyRoute(page: Page, from: string, to: string) {
   }
 
   static async verifyFlightCardsShowFareType(page: Page, cardsToCheck: number = 5) {
-    // Visible only: on round trip the inactive leg's cards stay in the DOM
+    
     const cards = page.locator(FlightPageLocators.flightResultCards).filter({ visible: true });
     await expect(cards.first(), 'At least one flight result card should be displayed').toBeVisible({ timeout: 60000 });
     const count = Math.min(await cards.count(), cardsToCheck);
@@ -332,7 +331,7 @@ static async verifyRoute(page: Page, from: string, to: string) {
     }
   }
 
-  // Flight number and price of a round trip result row, from its hidden .filter_data element
+  
   static async getRoundTripRowDetails(row: Locator) {
     const data = row.locator('.filter_data').first();
     return {
@@ -352,7 +351,7 @@ static async verifyRoute(page: Page, from: string, to: string) {
     await expect(onwardSelected, 'Exactly one onward flight should be selected').toHaveCount(1, { timeout: 30000 });
     const onward = await this.getRoundTripRowDetails(onwardSelected);
 
-    // Narrow layouts show one leg at a time behind tabs; wide layouts show both columns
+   
     const returnTab = page.locator(FlightPageLocators.roundTripTab('return'));
     if (await returnTab.isVisible()) {
       await returnTab.click();
@@ -361,9 +360,35 @@ static async verifyRoute(page: Page, from: string, to: string) {
     const returnColumn = page.locator(FlightPageLocators.roundTripResultColumn(2));
     await expect(returnColumn, 'Return flights should be displayed').toBeVisible({ timeout: 30000 });
 
+    // Results stream in progressively behind a loader bar (#ldr_prog) - reading the row count
+    // before it finishes can undercount genuinely available flights
+    const resultsLoader = page.locator('#ldr_prog');
+    await expect(resultsLoader, 'Flight results loader should finish before reading return flight rows').toBeHidden({ timeout: 30000 });
+
+    // A "Non-stop" filter chip can be left active on the return leg from an earlier test/session
+    // on this shared account, silently narrowing results to 1 flight - remove it via its inline
+    // close icon (the Clear All button lives in a filter modal that isn't open in this flow).
+    const returnNonStopChipClose = page.locator(FlightPageLocators.roundTripNonStopChipClose('return'));
+    if (await returnNonStopChipClose.isVisible().catch(() => false)) {
+      await returnNonStopChipClose.click();
+      await expect(resultsLoader, 'Flight results loader should finish after clearing the Non-stop filter').toBeHidden({ timeout: 30000 });
+    }
+
     // Pick a return flight that is not already selected, preferring a different price so the total visibly changes
     const previousReturn = await this.getRoundTripRowDetails(page.locator(FlightPageLocators.roundTripSelectedRow(2)).first());
     const returnRows = page.locator(FlightPageLocators.roundTripResultRows(2)).filter({ visible: true });
+    await expect(returnRows.first(), 'At least one return flight row should be visible').toBeVisible({ timeout: 30000 });
+
+    // Return rows render asynchronously after the tab switch; wait for the count to stop changing
+    // before reading it, otherwise we can read it mid-render and see only the first row
+    let previousRowCount = -1;
+    await expect(async () => {
+      const currentRowCount = await returnRows.count();
+      const stable = currentRowCount === previousRowCount && currentRowCount > 0;
+      previousRowCount = currentRowCount;
+      expect(stable, `Waiting for return flight rows to finish loading (currently ${currentRowCount})`).toBe(true);
+    }, 'Return flight rows count should stabilize after switching to the return tab').toPass({ timeout: 15000, intervals: [500, 1000, 1000, 2000] });
+
     const rowCount = await returnRows.count();
     let target: Locator | undefined;
     for (let i = 0; i < rowCount; i++) {
@@ -376,13 +401,12 @@ static async verifyRoute(page: Page, from: string, to: string) {
     const selected = await this.getRoundTripRowDetails(target!);
     await target!.locator('.flightcardinner').first().click();
 
-    // Highlighted: the clicked row is the one and only selected return flight
     await expect(target!, `Selected return flight ${selected.flightNumber} should be highlighted`).toHaveClass(/\buser_clicked\b.*\bactive\b|\bactive\b.*\buser_clicked\b/, { timeout: 10000 });
     await expect(page.locator(FlightPageLocators.roundTripSelectedRow(2)), 'Exactly one return flight should be selected').toHaveCount(1);
     await expect(onwardSelected, 'Onward selection should stay unchanged').toHaveCount(1);
     expect((await this.getRoundTripRowDetails(onwardSelected)).flightNumber, 'Onward selection should stay unchanged').toBe(onward.flightNumber);
 
-    // Fare summary: footer total = onward fare + selected return fare
+
     const expectedTotal = onward.price + selected.price;
     const footerTotal = page.locator(FlightPageLocators.roundTripFooterTotal);
     await expect(footerTotal, `Fare summary total should be onward ₹${onward.price} + return ₹${selected.price}`).toHaveAttribute('data-total_price', String(expectedTotal), { timeout: 10000 });
@@ -521,9 +545,6 @@ static async clickOnReturnDate(page: any) {
    }
     await ElementHelper.waitForElementVisible(page, FlightPageLocators.roomCountDropdown);
     await VerificationHelpers.elementIsVisible(page, FlightPageLocators.roomCountDropdown);
-    // The traveller count is tied to the account on the server, not local browser state, so an earlier
-    // test's unreset passenger count (e.g. SC_003.03) otherwise carries over into whichever test runs next
-    // and compounds across a full suite run until it exceeds the product's 9-passenger search limit.
     await this.resetTravellersToOneAdult(page);
   }
 
@@ -655,6 +676,16 @@ static async VerifyFirstFlightCardVisible(page: any) {
 
 
   static async clickOnSortTab(page: any) {
+    // The modal opened by the filter icon takes a short animation to become visible - poll for it
+    // rather than checking instantly (isVisible() doesn't wait), to avoid re-clicking a modal
+    // that is still mid-open (a second click while it's open toggles it closed again).
+    const sortTab = page.locator(FlightPageLocators.sortTabButton);
+    const openedAlready = await sortTab.waitFor({ state: 'visible', timeout: 10000 }).then(() => true).catch(() => false);
+    if (!openedAlready) {
+      // Occasionally (seen in CI) the modal flashes open and auto-closes on its own right after
+      // the icon is clicked - it is genuinely closed at this point, so re-click it once.
+      await ElementHelper.clickElement(page, FlightPageLocators.flightListFilterButton);
+    }
     await ElementHelper.clickElement(page, FlightPageLocators.sortTabButton);
   }
 
@@ -775,7 +806,7 @@ static async select1StopFilter(page: Page): Promise<void> {
 
       }
    
-      break; // important
+      break;
     }
     }
  
@@ -824,6 +855,27 @@ static async select1StopFilter(page: Page): Promise<void> {
   static async VerifyfilterDepartureTimeMorningVisible(page: any) {
     await ElementHelper.waitForElementVisible(page, FlightPageLocators.filterDepartureTimeMorning);
     await VerificationHelpers.elementIsVisible(page, FlightPageLocators.filterDepartureTimeMorning);
+  }
+
+  static async selectDepartureTimeMorningFilter(page: any) {
+    await ElementHelper.clickElement(page, FlightPageLocators.filterDepartureTimeMorning);
+  }
+
+  static async verifyFlightCardsDepartInMorning(page: Page, cardsToCheck: number = 5) {
+    const cards = page.locator(FlightPageLocators.flightResultCards).filter({ visible: true });
+    await expect(cards.first(), 'Filtered results should still display at least one flight card').toBeVisible({ timeout: 30000 });
+    const count = Math.min(await cards.count(), cardsToCheck);
+
+    for (let i = 0; i < count; i++) {
+      const text = await cards.nth(i).innerText();
+      const { departureTime, price } = this.parseFlightCard(text);
+      expect(departureTime, `Flight card ${i + 1} should show a departure time. Text: ${text.replace(/\s+/g, ' ').trim()}`).toBeTruthy();
+      const hour = Number(departureTime!.split(':')[0]);
+      expect(hour, `Flight card ${i + 1} departure time ${departureTime} should fall within Morning (06:00-11:59)`).toBeGreaterThanOrEqual(6);
+      expect(hour, `Flight card ${i + 1} departure time ${departureTime} should fall within Morning (06:00-11:59)`).toBeLessThan(12);
+      expect(price, `Flight card ${i + 1} should show a price greater than 0`).toBeGreaterThan(0);
+      console.log(`Flight card ${i + 1} departs at ${departureTime}, price ₹${price} (all these are morning flight cards )`);
+    }
   }
 
   static async VerifyfilterDepartureTimeAfternoonVisible(page: any) {
@@ -1100,9 +1152,6 @@ static async select1StopFilter(page: Page): Promise<void> {
     await this.continueThroughFareModal(page);
   }
 
-  // Same first half as clickOnBookButtonOnFlightDetailsPage (clicks the same footer_return_btn button and
-  // handles the Nearby Airport popup), but stops once the onward-leg fare modal opens instead of
-  // auto-continuing through it — lets a round trip test verify/select fares per leg (see TC-37975)
   static async openFareDetailsForOnwardLeg(page: any) {
     await page.waitForTimeout(3000);
 
@@ -1126,7 +1175,6 @@ static async select1StopFilter(page: Page): Promise<void> {
     const shown = await confirmButton.waitFor({ state: 'visible', timeout }).then(() => true, () => false);
     if (!shown) return false;
     console.log('Nearby Airport popup shown, clicking Confirm');
-    // Modal fade-in can still be animating; fall back to a forced click if the button is covered
     await confirmButton.click({ timeout: 10000 }).catch(() => confirmButton.click({ force: true }));
     await expect(page.locator(FlightPageLocators.nearbyAirportPopup), 'Nearby Airport popup should close after Confirm').toBeHidden({ timeout: 30000 });
   
@@ -1148,9 +1196,7 @@ static async select1StopFilter(page: Page): Promise<void> {
     return true;
   }
 
-  // Verifies each fare/service option card (e.g. "Regular Fare", "NDC_Value") shows its inclusions (Cabin/Check-in/Meal) and a price
   static async verifyFareOptionsDisplayed(page: Page) {
-    // Visible only: the other leg's fare cards can already be in the DOM, just hidden, before Continue is clicked
     const cards = page.locator(FlightPageLocators.fareOptionCards).filter({ visible: true });
     await expect(cards.first(), 'At least one fare option should be displayed').toBeVisible({ timeout: 30000 });
     const count = await cards.count();
@@ -1177,20 +1223,21 @@ static async select1StopFilter(page: Page): Promise<void> {
     const cards = page.locator(FlightPageLocators.fareOptionCards).filter({ visible: true });
     const target = cards.nth(index);
     const fareName = (await target.locator('h4').innerText()).trim();
-    await target.click();
+    // Both legs' fare cards stay in the DOM at once (only visibility toggles on Continue), and the
+    // page's scroll position doesn't always settle for the newly-visible (return) section - a plain
+    // click's built-in scroll-then-verify-in-viewport check can loop forever against that. Scroll
+    // explicitly and force the click, same as ElementHelper.clickElement does elsewhere for this reason.
+    await target.scrollIntoViewIfNeeded();
+    await target.click({ force: true });
     await expect(target, `Fare option "${fareName}" should become selected after clicking it`).toHaveClass(/\bactive\b/, { timeout: 10000 });
     console.log(`Selected fare option "${fareName}"`);
   }
 
-  // Round trip fare modal: switches to the return leg's fare carousel via its tab (no Continue click needed)
   static async clickOnFareModalReturnTab(page: any) {
     await ElementHelper.clickElement(page, FlightPageLocators.fareModalReturnTab);
   }
 
-  // Confirms the modal's fare summary total matches whichever fare option is currently selected
   static async verifyFareSummaryReflectsSelectedFare(page: Page) {
-    // Round trip: the footer total is onward's selected fare + return's selected fare combined, not just
-    // whichever leg's carousel is currently visible — so sum every selected card (one active card per leg)
     const selectedCards = page.locator(FlightPageLocators.fareOptionCardSelected);
     const count = await selectedCards.count();
     expect(count, 'At least one fare option should be selected').toBeGreaterThan(0);
@@ -1222,8 +1269,6 @@ static async select1StopFilter(page: Page): Promise<void> {
     }
   }
 
-  // Single Continue click on the fare modal (vs. continueThroughFareModal's up-to-3-clicks loop) — for a round
-  // trip, clicking this once on the onward-leg fare modal reveals the return-leg fare modal in its place
   static async clickOnFareModalContinueButton(page: any) {
     const continueLocator = page.locator(FlightPageLocators.fareModalContinueButton);
     const continueButton = await continueLocator.elementHandle();
@@ -1234,8 +1279,6 @@ static async select1StopFilter(page: Page): Promise<void> {
   }
 
   static async clickOnContinueButtonOnFlightDetailsPage(page: any) {
-    await this.confirmNearbyAirportPopupIfShown(page, 2000);
-    // A resurfaced popup can leave an unconfirmed fare modal in front of the traveller-details Continue button
     if (await page.locator(FlightPageLocators.fareModalContinueButton).isVisible()) {
       await this.continueThroughFareModal(page);
     }
@@ -1438,6 +1481,10 @@ static async enterMobileNo(page: any, data: any) {
   }
   }
 
+  static async verifyTravellerSavedSuccessToastVisible(page: Page): Promise<void> {
+    await VerificationHelpers.elementIsVisible(page, FlightPageLocators.travellerSavedSuccessToast);
+  }
+
   static async clickOnAddTravellerButton(page: any) {
     const CLIENT = process.env.CLIENT?.toUpperCase();
     switch (CLIENT) {
@@ -1466,10 +1513,6 @@ static async enterMobileNo(page: any, data: any) {
       break;
 
     case 'IDFC': {
-      // VerificationHelpers.elementIsVisible reloads the page on its very first failed attempt, before any
-      // caller gets a chance to react — and that reload re-triggers a "Price change" dialog (stale fare lock
-      // revalidated on reload), with the price climbing further each time, which then blocks the edit button
-      // on the next attempt too. Poll without ever reloading instead, dismissing the dialog inline if it shows.
       const editButton = page.locator(FlightPageLocators.FirstTravellerNameEditButton);
       const deadline = Date.now() + 60000;
       while (!(await editButton.isVisible()) && Date.now() < deadline) {
@@ -1483,8 +1526,6 @@ static async enterMobileNo(page: any, data: any) {
   }
   }
 
-  // For flows that never add a second traveller (e.g. SC_007, SC_008 search with only 1 traveller):
-  // FirstTravellerNameEditButton's index [2] never exists, so this edits the self/only traveller at index [1].
   static async clickOnSelfTravellerEditButton(page: any) {
     const CLIENT = process.env.CLIENT?.toUpperCase();
   switch (CLIENT) {
@@ -1505,7 +1546,12 @@ static async enterMobileNo(page: any, data: any) {
     }
   }
   }
-
+  static async clickOnDeleteTravellerButton(page: any) {
+    await ElementHelper.clickElement(page, FlightPageLocators.deleteTravellerButton);
+  }
+  static async clickOnRemoveTravellerConfirmButton(page: any) {
+    await ElementHelper.clickElement(page, FlightPageLocators.priceChangeConfirmButton);
+  }
 
   static async clickOnFirstOptionCheckbox(page: any) {
     await VerificationHelpers.elementIsVisible(page, FlightPageLocators.FirstOptionCheckbox);
@@ -1558,7 +1604,6 @@ static async selectPassportDetails(page: any) {
       break;
     }
     case 'IDFC':
-      // No passport handling required
       break;
 
     default:
@@ -1576,7 +1621,6 @@ static async selectPassportDetailstravellerpage(page: any) {
         FlightPageLocators.passportnumbertravellerpage
       );
 
-      // Handle passport details only if passport field is visible
       if (await passportField.isVisible()) {
         await ElementHelper.clearAndEnterInTextField(
           page,
@@ -1625,7 +1669,6 @@ static async selectPassportDetailstravellerpage(page: any) {
     await VerificationHelpers.elementIsVisible(page, FlightPageLocators.firstTravellerNameEditConfirmButton);
     await ElementHelper.clickElement(page, FlightPageLocators.firstTravellerNameEditConfirmButton);
     await page.waitForTimeout(3000);
-    // Saving a traveller may open a "Review traveller details" popup that blocks the Continue button
     const reviewConfirm = page.locator(FlightPageLocators.reviewtravllerbutton);
     if (await reviewConfirm.waitFor({ state: 'visible', timeout: 10000 }).then(() => true, () => false)) {
       await ElementHelper.clickElement(page, FlightPageLocators.reviewtravllerbutton);
@@ -1895,11 +1938,6 @@ static async clickOncontinueButtonOnTravellerPage(page: any) {
   }
 }
 
-// Traveller Details page's own Continue button. Uses the existing travellerDetailsPageContinuebutton
-// locator directly (it was defined but never wired to a method) — clickOncontinueButtonOnTravellerPage
-// above uses continueButtonOnFlightDetailsPage instead, which is the wrong button here and resets the
-// page back to an empty traveller selection, so this is a separate method rather than a fix to that
-// shared one (which other tests already depend on).
 static async clickOnTravellerDetailsContinueButton(page: any) {
   await VerificationHelpers.elementIsVisible(page, FlightPageLocators.travellerDetailsPageContinuebutton);
   await ElementHelper.clickElement(page, FlightPageLocators.travellerDetailsPageContinuebutton);
@@ -1911,7 +1949,7 @@ static async travellersAndAddonsContinueButton(page: any) {
     await VerificationHelpers.elementIsVisible(page, FlightPageLocators.travellersAndAddonsContinueButton);
       await ElementHelper.clickElement(page, FlightPageLocators.travellersAndAddonsContinueButton);
   }
-    await page.waitForTimeout(3000); // Wait for navigation to complete
+    await page.waitForTimeout(3000); 
 }
 
 
@@ -1950,8 +1988,6 @@ static async verifyPriceIncreasesAfterSeatSelection(page: any) {
   }
 }
 
-// Selects the first available Column A seat (a free "freebox" seat — availableSeat/
-// verifyPriceIncreasesAfterSeatSelection above only target paid "extrapayhigh" seats)
 static async clickOnAvailableSeatColumnA(page: any) {
   await VerificationHelpers.elementIsVisible(page, FlightPageLocators.availableSeatColumnA);
   await ElementHelper.clickElement(page, FlightPageLocators.availableSeatColumnA);
