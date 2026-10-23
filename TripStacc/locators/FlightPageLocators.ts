@@ -152,6 +152,7 @@ export const FlightPageLocators = {
   GSTHeader: `//h4[text()="GST Information (Optional)"] | //h4[text()="GST Information"]`,
   defaultGSTNumber: `//input[contains(@class,"booking_gst_number")]`,
   gstErrorMessage: `//p[text()="Please enter a valid GST number"]`,
+  gstValidMessage: `//p[text()="GST number is valid"]`,
   passportDetailHeading: `//h4[text()="Passport information"] | //span[text()="Passport Number "]`,
   passportErrorMessage: `//i[text()="* Please enter passenger’s passport number"]`,
   passportCountryErrorMessage: `//i[text()="* Please enter passport’s issuing country"]`,
@@ -194,19 +195,38 @@ bookingDate: `//div[@class='travell_info']//p | (//td[@class='bookng_date bookng
   travellerDetailsPageContinuebutton: `//button[@class="flbookbtn traveller_details_continue"]`,
    seatSelectionOption: "//li[@class='seat_li active'] | //a[@class='btn btn-sm btn-default seat_tab']",
 baggageSelectionOption: "//li[@class='baggage_li'] | //a[@class='btn btn-sm btn-default baggage_tab']",
+  // Same naming convention as seatSelectionOption/baggageSelectionOption above (seat_li/seat_tab, baggage_li/baggage_tab)
+  mealSelectionOption: "//li[@class='meal_li'] | //a[@class='btn btn-sm btn-default meal_tab']",
+  // Each meal option row on the Meal add-on page; carries data-meal_name/data-meal_price attributes
+  // (confirmed via DevTools) and wraps a <h5> name and a ".priceshowbox h3" price
+  mealOptionCards: `//div[contains(@class,"selemeal_card")]`,
   seatMapContainer: '(//div[@class="seatselaction_innerbox"])[1]',
   availableSeat: '(//div[@class="columninnebox extrapayhigh"])[1] | (//div[@class=" choose_seat  seat_popup"])[1]',
   // First available (data-availability="1") Column A seat — availableSeat above only matches extra-pay
   // seats (class "extrapayhigh"); free seats are class "freebox" and identified by data-seat_number
   availableSeatColumnA: `(//div[contains(@class,"rowcolumn") and @data-availability="1" and contains(@data-seat_number,"A")])[1]//div[contains(@class,"columninnebox")]`,
+  // Plain class match for any free seat cell, regardless of column — a taken seat (e.g. already booked by
+  // this account from a prior run) no longer carries this exact class, so it's excluded automatically
+  availableFreeSeat: `(//div[@class="columninnebox freebox"])[1]`,
   UnavailableSeat: '(//div[@class="columninnebox Unavailable"])[1]',
+  // Seat cell gets a "selected" class added after being clicked — finds it directly regardless of
+  // which locator (availableSeatColumnA / availableFreeSeat) actually clicked it
+  selectedSeatCell: `//div[contains(@class,"columninnebox") and contains(@class,"selected")]`,
+  // Tooltip shown on hover over a selected seat: "Selected (1/1)" + seat number, location (e.g. "Window seat"), price
+  // Every seat cell has its own hidden tooltip span (one per seat, ~24 on a map) — visible=true scopes
+  // to only the one actually shown by the current hover, avoiding a strict-mode violation
+  seatTooltipNumber: `//span[@class="seatnumb"] >> visible=true >> nth=0`,
+  seatTooltipLocation: `//span[@class="seatloca"] >> visible=true >> nth=0`,
+  seatTooltipPrice: `//span[@class="seatextrprice"] >> visible=true >> nth=0`,
   unvailableSeatErrorMessage: `(//p[text()="Sorry! This seat is taken"])[1]`,
   seatPrice: `(//h4[contains(@class,'fl_det_footer') and contains(text(),'₹')])[3] | //span[@class='grandtotal_after_red grandtotal_after_red_ga']`,
   weightIncreasePlusButton: `(//span[@class='coplus'])[9]|(//div[@class='baggage_add_right'])[2]`,
   weightincreaseplusbuttonmob: `(//span[@class='coplus'])[3]`,
  skipAndPayButton: "//a[@class='skipbtn skipToCheckout'] | //a[@id='check_selected']",
   travellerAndAddoneHeading: `//h4[text()="Travellers & Add-ons"]`,
-  travellersAndAddonsContinueButton: `//button[@class="bookcont continue_redm_button poptimemsg"] | //button[@class="flbookbtn extra_service_cont_btn"]`,
+  // Second alternative fixed: the real button is <button class="flbookbtn" id="extra_service_cont_btn">
+  // (id, not part of the class) — confirmed via DevTools on the Seat/Meal add-ons page
+  travellersAndAddonsContinueButton: `//button[@class="bookcont continue_redm_button poptimemsg"] | //button[@id="extra_service_cont_btn"]`,
   noFlightsText: `//h5[@class="no_flts"]`,
   fromCityMobile: `//input[@id="from" and @placeholder="Select city or airport"]`,
   fromCitySearchMobile: `(//input[@id="from" and @placeholder="Search for city or airport"])[2]`,

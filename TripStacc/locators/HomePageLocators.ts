@@ -2,18 +2,14 @@ export const HomePageLocators = {
   cardPopup: `//h4[@class="modal-title popuptitle"]`,
   cardOption: `//div[@class="card-content-wrapper"]`,
   continueButton: `//button[text()='Continue']`,
-  
   header: `//header//div[@class="newHeader_box"] >> visible=true >> nth=0`,
   searchWidget: `//div[@id="search_area"] >> visible=true >> nth=0`,
   banner: `//div[@id="myCarouselflight"] | //div[@id="myCarouselhotel"] >> visible=true >> nth=0`,
   footer: `//footer >> visible=true >> nth=0`,
-
-
   logo: `//header//img[@alt="Logo"] >> visible=true >> nth=0`,
   flightsTab: `//a[@id="flights_link"]`,
   hotelsTab: `//a[@id="hotels_link"]`,
   profileIcon: `//header//a[contains(@class,"sso_login_div")]`,
-
   bannerActiveSlide: `//div[contains(@class,"carousel slide")]//div[contains(@class,"item") and contains(@class,"active")] >> visible=true >> nth=0`,
   bannerActiveSlideImage: `//div[contains(@class,"carousel slide")]//div[contains(@class,"item") and contains(@class,"active")]//img >> visible=true >> nth=0`,
   bannerPreviousButton: `//div[contains(@class,"carousel slide")]//a[@data-slide="prev"] >> visible=true >> nth=0`,
@@ -35,20 +31,18 @@ export const HomePageLocators = {
   searchHotelsButton: `//input[@id="hotel_search_btn"]`,
   recentSearchesTitle: `//p[@class="recentTitle"] >> visible=true >> nth=0`,
   recentSearchCard: `//a[@class="recentCard" or @class="recent_crd"] >> visible=true >> nth=0`,
-
-  // Body sections
   myTripsAndBookings: `//div[@class="mytripbookings"] >> visible=true >> nth=0`,
   myTripsManageLink: `//div[@class="mytripbookings"]//a >> visible=true >> nth=0`,
   bestOffersSection: `//div[contains(@class,"best_value_home")] >> visible=true >> nth=0`,
   bestOfferCard: `//li[contains(@class,"bestValueModalBtn") or contains(@class,"bestValueHotelModalBtn")] >> visible=true >> nth=0`,
   bestOfferCardsAll: `//li[contains(@class,"bestValueModalBtn") or contains(@class,"bestValueHotelModalBtn")] >> visible=true`,
   bankOffersSection: `//section[contains(@class,"bank_offer")]`,
+  bankOffersImages: `//section[contains(@class,"bank_offer")]//img >> visible=true`,
   whyBookSection: `//div[@class="why_loyalty"]`,
   whyBookItems: `//div[@class="why_loyalty"]//h5`,
   faqSection: `//div[@class="api_faq"]`,
   faqCategoryTabs: `//div[@class="api_faq"]//a[@href="#home" or @href="#menu2" or @href="#menu3"]`,
   faqQuestion: `//div[@class="api_faq"]//*[@role="tab"] >> visible=true >> nth=0`,
- 
   faqGeneralTab: `//div[@class="api_faq"]//a[@href="#home"]`,
   faqFlightsTab: `//div[@class="api_faq"]//a[@href="#menu2"]`,
   faqHotelsTab: `//div[@class="api_faq"]//a[@href="#menu3"]`,

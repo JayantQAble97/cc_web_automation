@@ -1796,6 +1796,12 @@ static async selectPassportDetailstravellerpage(page: any) {
   }
   }
 
+  // Positive confirmation (e.g. "GST number is valid") shown under the GST field — EnterNewTravellerGST
+  // above only checks the error message is hidden, this checks the success message is actually shown
+  static async verifyGSTNumberValidMessageVisible(page: any) {
+    await VerificationHelpers.elementIsVisible(page, FlightPageLocators.gstValidMessage);
+  }
+
   static async VerifyPassportHeaderVisible(page: any) {
     await ElementHelper.waitForElementVisible(page, FlightPageLocators.passportDetailHeading);
     await VerificationHelpers.elementIsVisible(page, FlightPageLocators.passportDetailHeading);
@@ -1967,6 +1973,37 @@ static async verifyBaggageSelectionOptionVisible(page: any) {
   }
 }
 
+static async verifyMealSelectionOptionVisible(page: any) {
+  if (await ElementHelper.isElementDisplayed(page, FlightPageLocators.mealSelectionOption)) {
+    await ElementHelper.waitForElementVisible(page, FlightPageLocators.mealSelectionOption);
+    await VerificationHelpers.elementIsVisible(page, FlightPageLocators.mealSelectionOption);
+  }
+}
+
+// Verifies the Meal add-on page lists meal options, each with a visible name and price
+static async verifyMealOptionsDisplayedWithPrices(page: Page) {
+  const mealCards = page.locator(FlightPageLocators.mealOptionCards);
+  const count = await mealCards.count();
+  expect(count, 'At least one meal option should be displayed').toBeGreaterThan(0);
+
+  for (let i = 0; i < count; i++) {
+    const card = mealCards.nth(i);
+    const mealName = await card.getAttribute('data-meal_name');
+    await expect(card.locator('h5'), `Meal name should be visible for "${mealName}"`).toBeVisible();
+    await expect(card.locator('.priceshowbox h3'), `Meal price should be visible for "${mealName}"`).toBeVisible();
+    const mealPriceText = (await card.locator('.priceshowbox h3').innerText()).trim();
+    expect(mealName, 'Meal option should have a name').toBeTruthy();
+    expect(mealPriceText, `Meal option "${mealName}" should show a price`).toBeTruthy();
+    console.log(`Meal option: ${mealName}, Price="${mealPriceText}"`);
+  }
+}
+
+// Total fare shown in the Add-ons page footer (reuses seatPrice — same locator used elsewhere to read
+// the before/after price around a seat/baggage change, here just confirming it's displayed)
+static async verifyAddOnsTotalFareVisible(page: any) {
+  await VerificationHelpers.elementIsVisible(page, FlightPageLocators.seatPrice);
+}
+
 static async verifySeatMapVisible(page: any) {
     await ElementHelper.waitForElementVisible(page, FlightPageLocators.seatMapContainer);
     await VerificationHelpers.elementIsVisible(page, FlightPageLocators.seatMapContainer);
@@ -1991,6 +2028,46 @@ static async verifyPriceIncreasesAfterSeatSelection(page: any) {
 static async clickOnAvailableSeatColumnA(page: any) {
   await VerificationHelpers.elementIsVisible(page, FlightPageLocators.availableSeatColumnA);
   await ElementHelper.clickElement(page, FlightPageLocators.availableSeatColumnA);
+}
+
+// Prefers an available Column A seat; if A is already taken (e.g. by this same account from a prior
+// run, as seen live — the "3A" cell showing a traveller's initials instead of being free), falls back
+// to the first available free seat in any column instead of failing.
+static async clickOnAvailableSeat(page: any) {
+  const columnASeat = page.locator(FlightPageLocators.availableSeatColumnA);
+  if (await columnASeat.isVisible().catch(() => false)) {
+    await ElementHelper.clickElement(page, FlightPageLocators.availableSeatColumnA);
+  } else {
+    await VerificationHelpers.elementIsVisible(page, FlightPageLocators.availableFreeSeat);
+    await ElementHelper.clickElement(page, FlightPageLocators.availableFreeSeat);
+  }
+}
+
+static async hoverOnSelectedSeatAndVerifyTooltip(page: Page) {
+  await ElementHelper.hoverOverMenu(page, FlightPageLocators.selectedSeatCell);
+  // Plain (non-reloading) visibility checks here, not ElementHelper.waitForElementVisible /
+  // VerificationHelpers.elementIsVisible — both reload the page on a first miss, which would
+  // destroy the hover state this tooltip depends on and guarantee failure on the retry.
+  await expect(page.locator(FlightPageLocators.seatTooltipNumber), 'Seat tooltip number should be visible on hover').toBeVisible({ timeout: 10000 });
+  await expect(page.locator(FlightPageLocators.seatTooltipLocation), 'Seat tooltip location should be visible on hover').toBeVisible({ timeout: 10000 });
+  await expect(page.locator(FlightPageLocators.seatTooltipPrice), 'Seat tooltip price should be visible on hover').toBeVisible({ timeout: 10000 });
+
+  const seatNumber = (await page.locator(FlightPageLocators.seatTooltipNumber).textContent())?.trim();
+  const seatLocation = (await page.locator(FlightPageLocators.seatTooltipLocation).textContent())?.trim();
+  const seatPrice = (await page.locator(FlightPageLocators.seatTooltipPrice).textContent())?.trim();
+
+  expect(seatNumber, 'Seat tooltip should show the selected seat number').toBeTruthy();
+  expect(seatLocation, 'Seat tooltip should show the seat location (e.g. Window seat)').toBeTruthy();
+  expect(seatPrice, 'Seat tooltip should show the seat price').toBeTruthy();
+
+  // Full on-screen tooltip text (e.g. "Selected (1/1) 3A Window seat ₹0") — walks up from the already-used
+  // seatTooltipNumber locator to its tooltip container rather than adding a new standalone locator
+  const fullTooltipText = (await page.locator(FlightPageLocators.seatTooltipNumber)
+    .locator('xpath=ancestor::div[contains(@class,"usrtooltipbox")]')
+    .innerText())?.replace(/\s+/g, ' ').trim();
+
+  console.log(`Seat tooltip message: "${fullTooltipText}"`);
+  console.log(`Seat tooltip parsed: Seat=${seatNumber}, Location=${seatLocation}, Price=${seatPrice}`);
 }
 
 static async clickOnbaggageOption(page: any) {

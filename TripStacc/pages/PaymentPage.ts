@@ -5,6 +5,7 @@ const idfcTestData = require('../testData/tripStacc.json');
 import { DeviceHelper } from '../../utils/deviceHelper';
 import { VerificationHelpers } from '../../utils/verificationHelper';
 import { Data } from '../../utils/dataProvider';
+import { FlightHomePage } from './FlightHomePage';
 
 export class PaymentPage {
 
@@ -24,6 +25,34 @@ export class PaymentPage {
     await page.waitForSelector(PaymentPageLocators.checkoutPayButton, { state: 'visible' });
     const payableText = await page.textContent(PaymentPageLocators.checkoutPayButton);
     console.log(`This amount is payable: ${payableText}`);
+  }
+
+  // Confirms the checkout/booking page has loaded with the selected flight: route, trip details
+  // (cabin class, as captured during search) and a non-zero total amount are all shown.
+  static async verifyCheckoutPageLoadedWithSelectedFlight(page: Page) {
+    await expect(page).toHaveURL(/\/flight\/booking\//, { timeout: 30000 });
+
+    const body = page.locator('body');
+    const fromCode = FlightHomePage.getAirportCode(FlightHomePage.selectedFromCity);
+    const toCode = FlightHomePage.getAirportCode(FlightHomePage.selectedToCity);
+    if (fromCode && toCode) {
+      await expect(body, `Checkout page should show the origin airport ${fromCode}`).toContainText(fromCode, { timeout: 15000 });
+      await expect(body, `Checkout page should show the destination airport ${toCode}`).toContainText(toCode, { timeout: 15000 });
+      console.log(`Checkout page shows selected route: ${fromCode} -> ${toCode}`);
+    } else {
+      console.log(`Skipping route check: origin/destination not captured (From: "${FlightHomePage.selectedFromCity}", To: "${FlightHomePage.selectedToCity}")`);
+    }
+
+    if (FlightHomePage.selectedTravelClass) {
+      await expect(body, `Checkout page should show the selected trip class "${FlightHomePage.selectedTravelClass}"`).toContainText(FlightHomePage.selectedTravelClass, { timeout: 15000 });
+    }
+
+    await ElementHelper.waitForElementVisible(page, PaymentPageLocators.checkoutPayButton);
+    const amountText = await page.locator(PaymentPageLocators.checkoutPayButton).textContent();
+    const amount = Number(amountText?.replace(/[^\d]/g, ''));
+    expect(amount, `Checkout page should show a total payable amount greater than 0, got: "${amountText}"`).toBeGreaterThan(0);
+
+    console.log(`Checkout page loaded with selected flight. Route: ${fromCode ?? '?'} -> ${toCode ?? '?'}, Class: ${FlightHomePage.selectedTravelClass}, Total: ₹${amount}`);
   }
 
   static async clickProceedButton(page: Page) {
