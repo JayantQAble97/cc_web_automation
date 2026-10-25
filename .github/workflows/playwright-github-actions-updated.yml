@@ -115,7 +115,7 @@ jobs:
 
           set +e
           CLIENT="$CLIENT" PROJECT="$PROJECT_VAL" npx playwright test TripStacc/tests \
-            --config=playwright.config.ts --workers=4 --retries=1
+            --config=playwright.config.ts --workers=5 --retries=1
           EXIT_CODE=$?
           set -e
           echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
