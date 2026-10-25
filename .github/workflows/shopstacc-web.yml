@@ -298,11 +298,11 @@ jobs:
         with:
           server_address: smtp.office365.com
           server_port: 587
-          username: jignesh.shah@customer-capital.com
+          username: jayant@qable.io
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "[${{ steps.stats.outputs.status }}] ShopStacc ${{ env.CLIENT }} ${{ env.ENVIRONMENT }} [${{ env.BROWSER }}/${{ env.VIEWPORT }}]${{ env.FEATURE_TAG && format(' @{0}', env.FEATURE_TAG) || '' }} — Playwright Report"
-          to: dharm.vrat@customer-capital.com
-          from: jignesh.shah@customer-capital.com
+          to: jayant@qable.io
+          from: jayant@qable.io
           html_body: |
             <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
               <h2 style="background:${{ steps.stats.outputs.status == 'FAILED' && '#cc0000' || '#00b300' }};color:#fff;padding:12px 16px;border-radius:4px;margin:0 0 0 0">

@@ -68,7 +68,7 @@ jobs:
       ENVIRONMENT: ${{ matrix.environment }}
       BROWSER: ${{ matrix.browser }}
       FEATURE_TAG: ${{ github.event.inputs.feature || (github.event_name == 'schedule' && 'sanity' || '') }}
-      EMAIL_TO: ${{ github.event_name == 'workflow_dispatch' && 'jignesh.shah@customer-capital.com' || 'dharm.vrat@customer-capital.com' }}
+      EMAIL_TO: jayant@qable.io
 
     steps:
       - name: Checkout repository
@@ -246,11 +246,11 @@ jobs:
         with:
           server_address: smtp.office365.com
           server_port: 587
-          username: jignesh.shah@customer-capital.com
+          username: jayant@qable.io
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "[${{ steps.stats.outputs.status }}] TripStacc IDFC ${{ env.ENVIRONMENT }} [${{ env.BROWSER }}/Web]${{ env.FEATURE_TAG && format(' @{0}', env.FEATURE_TAG) || '' }} — Playwright Report"
           to: ${{ env.EMAIL_TO }}
-          from: jignesh.shah@customer-capital.com
+          from: jayant@qable.io
           html_body: |
             <div style="font-family:Arial,sans-serif;max-width:600px;margin:auto">
               <h2 style="background:${{ steps.stats.outputs.status == 'FAILED' && '#cc0000' || '#00b300' }};color:#fff;padding:12px 16px;border-radius:4px;margin:0">
